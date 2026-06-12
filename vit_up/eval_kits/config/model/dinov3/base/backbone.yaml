@@ -1,0 +1,7 @@
+defaults:
+  - /model/base/backbone@_here_
+  - _self_
+
+backbone_model_name: facebook/dinov3-vitb16-pretrain-lvd1689m
+feature_dim: 768
+name: backbone_dinov3_base

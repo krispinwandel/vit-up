@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+_target_: vit_up.eval_kits.upsamplers.UpLiftUpsampler
+name: uplift
+feature_dim: 384
+local_repo: ${oc.env:HOME}/.cache/torch/hub/mwalmer-umd_UPLiFT_main
+force_local: false
+iter_values: [1, 2, 3, 4]

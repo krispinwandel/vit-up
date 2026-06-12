@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - /model@model: dinov3/base/backbone
+  - workstation: local
+  - _self_
+
+# dataset_dir: /media/user/ssd2t/datasets2/SPair-71k/
+# mnt_dir: ${hydra:runtime.cwd}
+# mnt_dir: /media/user/ssd2t/nf_dino_mnt
+cache_dir: ${mnt_dir}/data/spair71k
+img_size: 448
+out_size: 448
+
+hydra:
+  searchpath:
+    - file://${oc.env:PWD}/vit_up/eval_kits/config
+  run:
+    dir: ${mnt_dir}/output/correspondence_2d/${hydra:runtime.choices.model}/${now:%Y-%m-%d}/${now:%H-%M-%S}

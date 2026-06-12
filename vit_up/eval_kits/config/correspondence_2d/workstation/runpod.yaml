@@ -1,0 +1,7 @@
+# @package _global_
+
+workstation: runpod
+
+mnt_dir: /workspace
+dataset_dir: /workspace/data/SPair-71k/
+

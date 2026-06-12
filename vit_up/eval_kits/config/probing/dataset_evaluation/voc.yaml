@@ -1,0 +1,9 @@
+_target_: vit_up.eval_kits.probing_toolkit.dataset.voc.VOCDataset
+
+root: ${data_root}
+split: "train"              
+year: "2012"
+download: false             
+include_labels: true
+num_classes: 21             
+tag: "voc" 

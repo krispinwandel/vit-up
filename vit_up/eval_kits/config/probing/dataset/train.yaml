@@ -1,0 +1,4 @@
+# conf/dataset/train.yaml
+_target_: vit_up.eval_kits.probing_toolkit.dataset.image_folder.ImageFolderDataset
+root: ${dataroot}/train
+root_cache: null

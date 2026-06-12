@@ -1,0 +1,7 @@
+defaults:
+  - /model/base/uplift@_here_
+  - _self_
+
+dino_version: 3
+name: uplift_dinov3_splus
+feature_dim: 384

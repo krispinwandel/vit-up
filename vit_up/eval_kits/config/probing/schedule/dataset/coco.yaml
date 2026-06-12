@@ -1,0 +1,4 @@
+# @package _global_
+
+schedule:
+  num_epochs: 5

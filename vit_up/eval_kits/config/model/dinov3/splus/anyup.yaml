@@ -1,0 +1,7 @@
+defaults:
+  - /model/base/anyup@_here_
+  - _self_
+
+backbone: facebook/dinov3-vits16plus-pretrain-lvd1689m
+name: anyup_dinov3_splus
+feature_dim: 384

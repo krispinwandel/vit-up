@@ -1,0 +1,5 @@
+defaults:
+  - /model/base/naf@_here_
+  - _self_
+
+backbone: facebook/dinov2-small

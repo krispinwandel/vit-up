@@ -1,0 +1,41 @@
+fit:
+  trainer:
+    default_root_dir: logs
+    max_steps: 80000
+    val_check_interval: 500
+    limit_val_batches: 10
+    log_every_n_steps: 50
+    check_val_every_n_epoch: null
+    max_epochs: -1
+    num_sanity_val_steps: 0
+
+    accelerator: gpu
+    devices: 1
+    strategy: auto
+    precision: bf16-mixed
+    num_nodes: 1
+
+    fast_dev_run: false
+    min_epochs: null
+    min_steps: null
+    max_time: null
+    limit_train_batches: null
+    limit_test_batches: null
+    limit_predict_batches: null
+    overfit_batches: 0.0
+    enable_checkpointing: null
+    enable_progress_bar: null
+    enable_model_summary: null
+    accumulate_grad_batches: 1
+    deterministic: null
+    benchmark: null
+    inference_mode: true
+    use_distributed_sampler: true
+    profiler: null
+    detect_anomaly: false
+    barebones: false
+    plugins: null
+    sync_batchnorm: false
+    reload_dataloaders_every_n_epochs: 0
+    enable_autolog_hparams: true
+    model_registry: null

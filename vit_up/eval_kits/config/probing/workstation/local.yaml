@@ -1,0 +1,12 @@
+# @package _global_
+
+workstation: local
+
+# mnt_dir: ${hydra:runtime.cwd}
+mnt_dir: /media/user/ssd2t/nf_dino_mnt
+data_root: ${mnt_dir}/data
+dataroot: ${mnt_dir}/data/imagenet
+
+hydra:
+  run:
+    dir: ${mnt_dir}/output/probing/${mode}/${task}/${dataset_evaluation.tag}/${hydra:runtime.choices.model}/${now:%Y-%m-%d}/${now:%H-%M-%S}

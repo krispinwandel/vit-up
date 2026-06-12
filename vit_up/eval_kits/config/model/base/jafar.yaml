@@ -1,0 +1,6 @@
+defaults:
+  - _self_
+
+_target_: vit_up.eval_kits.upsamplers.JAFARUpsampler
+name: jafar
+feature_dim: 384

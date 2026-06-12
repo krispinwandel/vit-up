@@ -1,0 +1,6 @@
+# @package _global_
+
+schedule:
+  num_epochs: 1
+  lr: 2e-3
+head_ckpt: assets/pretrained_heads/${task}/${hydra:runtime.choices.schedule/dataset}/dinov3/backbone_probe.pth

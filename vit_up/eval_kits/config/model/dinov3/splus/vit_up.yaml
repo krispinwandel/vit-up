@@ -1,0 +1,8 @@
+defaults:
+  - /model/base/vit_up@_here_
+  - _self_
+
+model_name: vit_up_dinov3_splus
+out_size: null
+name: vit_up_dinov3_splus
+feature_dim: 384

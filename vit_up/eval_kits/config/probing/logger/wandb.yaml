@@ -1,0 +1,8 @@
+wandb:
+  use_wandb: false
+  project: nf-dino-probing
+  entity: null
+  run_name: null
+  tags: null
+  notes: null
+  save_code: false

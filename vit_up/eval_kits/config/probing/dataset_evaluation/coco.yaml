@@ -1,0 +1,7 @@
+_target_: vit_up.eval_kits.probing_toolkit.dataset.coco.COCODataset
+root: ${data_root}/COCOStuff
+split: "train"
+include_labels: True
+subset: null
+num_classes: 27
+tag: "coco"

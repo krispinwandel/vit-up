@@ -1,0 +1,5 @@
+defaults:
+  - /model/base/jafar@_here_
+  - _self_
+
+backbone: vit_small_patch14_dinov2.lvd142m

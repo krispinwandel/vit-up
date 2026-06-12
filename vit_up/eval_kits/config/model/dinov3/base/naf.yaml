@@ -1,0 +1,7 @@
+defaults:
+  - /model/base/naf_big@_here_
+  - _self_
+
+backbone: facebook/dinov3-vitb16-pretrain-lvd1689m
+feature_dim: 768
+name: naf_dinov3_base

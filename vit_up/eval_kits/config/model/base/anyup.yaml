@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+
+_target_: vit_up.eval_kits.upsamplers.AnyUpUpsampler
+name: anyup
+feature_dim: 384
+use_natten: true
+local_repo: ${oc.env:HOME}/.cache/torch/hub/wimmerth_anyup_main
+force_local: false

@@ -1,0 +1,17 @@
+fit:
+  data:
+    class_path: vit_up.data.data_liif.StreamedImageNetLIIFDataModule
+    init_args:
+      batch_size: 16
+      n_tokens_per_side: 56
+      num_train_workers: 6
+      num_val_workers: 3
+      target_size: 896
+      aug_strength: 1.0
+      min_rel_size: 0.5
+      img_container_rel_size_min: 0.1
+      img_container_rel_size_max: 1.0
+      path: null
+      pin_memory: True
+      prefetch_factor: 2
+      persistent_workers: False

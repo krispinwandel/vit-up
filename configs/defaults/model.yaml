@@ -1,0 +1,5 @@
+fit:
+  model:
+    class_path: vit_up.training.lightning_module.ViTUpPL
+    init_args:
+      backbone_model_name: "facebook/dinov3-vits16plus-pretrain-lvd1689m"

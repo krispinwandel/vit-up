@@ -1,0 +1,8 @@
+defaults:
+  - /model/base/vit_up@_here_
+  - _self_
+
+# ckpt_path: ${mnt_dir}/logs/nf_dino/mjzwfd65/checkpoints/last.ckpt
+ckpt_path: ${mnt_dir}/logs/nf_dino/uxpuzsn4/checkpoints/last.ckpt
+out_size: 224
+name: vit_up_224

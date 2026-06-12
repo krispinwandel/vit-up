@@ -1,0 +1,10 @@
+defaults:
+  - _self_
+
+_target_: vit_up.eval_kits.upsamplers.ViTUpUpsampler
+name: vit_up
+model_name: vit_up_dinov3_splus
+feature_dim: 384
+out_size: null
+query_chunk_size: 200704
+hidden_layer_img_size: 448

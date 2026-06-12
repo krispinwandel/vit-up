@@ -1,0 +1,7 @@
+defaults:
+  - /model/base/jafar@_here_
+  - _self_
+
+backbone: vit_small_plus_patch16_dinov3.lvd1689m
+name: jafar_dinov3_splus
+feature_dim: 384

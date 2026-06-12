@@ -1,0 +1,9 @@
+fit:
+  trainer:
+    logger:
+      class_path: lightning.pytorch.loggers.wandb.WandbLogger
+      init_args:
+        project: "vit_up"
+        name: null
+        save_dir: logs
+        log_model: false

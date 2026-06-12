@@ -1,0 +1,32 @@
+# @package _global_
+
+defaults:
+  - /model@model: dinov3/base/backbone
+  - _self_
+
+# Where Hydra writes outputs (including this config and results).
+# mnt_dir: ${hydra:runtime.cwd}
+mnt_dir: /media/user/ssd2t/nf_dino_mnt
+
+# Runtime options
+
+device: cuda
+batch_size: 1
+image_size: 448
+output_sizes: [56, 112, 224, 448]
+warmup_iters: 10
+bench_iters: 50
+
+dtype: bf16
+
+# When true, print param counts and exit without benchmarking.
+print_model_params_only: false
+
+save_results: true
+results_filename: runtime_bench.json
+
+hydra:
+  searchpath:
+    - file://${oc.env:PWD}/vit_up/eval_kits/config
+  run:
+    dir: ${mnt_dir}/output/runtime/${hydra:runtime.choices.model}/${now:%Y-%m-%d}/${now:%H-%M-%S}

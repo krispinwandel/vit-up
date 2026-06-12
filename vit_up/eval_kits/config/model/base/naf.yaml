@@ -1,0 +1,10 @@
+defaults:
+  - _self_
+
+_target_: vit_up.eval_kits.upsamplers.NAFUpsampler
+name: naf
+feature_dim: 384
+pretrained: true
+local_repo: ${oc.env:HOME}/.cache/torch/hub/valeoai_NAF_main
+force_local: false
+window_size: 0

@@ -1,0 +1,41 @@
+fit:
+  trainer:
+    callbacks:
+      - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+        init_args:
+          logging_interval: step
+      - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+        init_args:
+          monitor: val/loss
+          mode: min
+          save_top_k: 3
+          save_last: true
+          auto_insert_metric_name: false
+          filename: "epoch-{epoch}-step-{step}"
+      - class_path: vit_up.training.callbacks.vis_helper_callback.VisHelperCallback
+        init_args:
+          vis_helper:
+            class_path: vit_up.visualization.helpers.stack_vis_helper.StackVisHelper
+            init_args:
+              vis_helpers:
+                - class_path: vit_up.visualization.helpers.pca_vis_helper.PCAVisHelper
+                  init_args:
+                    gt_img_sizes: [2048, 448]
+                    pca_img_sizes: [256, 512, 1024]
+                    pred_out_sizes: [128]
+                    lr_hidden_layer_img_size: 448
+                    cell_width: 300
+                # - class_path: vit_up.visualization.helpers.attn_vis_helper.AttnVisHelper
+                #   init_args:
+                #     n_q_per_side: 128
+                #     gt_hidden_layer_img_size: 2048
+                #     pred_hidden_layer_img_size: 448
+                #     n_cells_per_side: 4
+                #     query_chunk_size: 128
+                #     cell_width: 300
+          num_images: 4
+          output_subdir: val_vis_pca_attn
+          run_every_n_val_epochs: 1
+          fixed_seed: 1234
+          log_to_wandb: true
+

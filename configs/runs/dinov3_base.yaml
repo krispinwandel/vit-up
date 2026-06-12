@@ -1,0 +1,197 @@
+trainer:
+  logger:
+    init_args:
+      name: vit_up_dinov3_base
+  max_steps: 53381
+
+data:
+  init_args:
+    img_container_rel_size_max: 1.0
+    batch_size: 24
+
+model:
+  class_path: vit_up.training.lightning_module.ViTUpPL
+  init_args:
+    backbone_model_name: "facebook/dinov3-vitb16-pretrain-lvd1689m"
+    compile_model: true
+    ckpt_path: null
+    lr_img_size: 448
+    window_size: 0
+    vit_up:
+      class_path: vit_up.model.vit_up.ViTUp
+      init_args:
+        layer_indices:
+          - 0
+          - 2
+          - 4
+          - 6
+          - 8
+          - 10
+          - 12
+        query_embedding:
+          class_path: vit_up.layers.query_encoder.QueryEncoder
+          init_args:
+            layer_index: 0
+            img_in_size: 3584
+            window_size: 0
+            out_proj_module: null
+        rel_pos_enc:
+          class_path: vit_up.layers.pos_enc.FourierPositionalEncoding
+          init_args:
+            num_bands: 16
+            max_resolution: 10.0
+        q_rope_embeddings:
+          class_path: vit_up.layers.continuous_rope.ContinuousRoPE2D
+          init_args:
+            dim: 64
+            base: 100.0
+            scale: 6.283185307179586
+        vit_up_blocks:
+          class_path: vit_up.layers.smart_module_list.SmartModuleList
+          init_args:
+            n_blocks: 6
+            block_class_path: vit_up.model.vit_up.ViTUpBlock
+            block_init_args:
+              dim: 768
+              dim_h: 768
+              transition_mlp:
+                class_path: vit_up.layers.mlp.SimpleMLP
+                init_args:
+                  dims:
+                    - 768
+                    - 1536
+                    - 768
+                  activation: gelu
+                  input_layernorm: true
+                  use_residual: true
+              cross_attention:
+                class_path: vit_up.layers.cross_attention.CrossAttention
+                init_args:
+                  dim: 768
+                  num_heads: 12
+                  cross_attn_window_size: 32
+                  qkv_bias: true
+                  attn_dropout: 0.0
+                  proj_dropout: 0.0
+              featx:
+                class_path: vit_up.layers.film.SimpleFiLMV2
+                init_args:
+                  input_module:
+                    class_path: torch.nn.LayerNorm
+                    init_args:
+                      normalized_shape: 768
+                  gamma_beta_mlp:
+                    class_path: vit_up.layers.mlp.SimpleMLP
+                    init_args:
+                      dims:
+                        - 66
+                        - 768
+                        - 1536
+                      activation: gelu
+                      zero_init_last: true
+                  post_mlp:
+                    class_path: vit_up.layers.mlp.SimpleMLP
+                    init_args:
+                      dims:
+                        - 768
+                        - 3072
+                        - 768
+                      activation: gelu
+                      input_layernorm: true
+                      use_residual: false
+              mlp:
+                class_path: vit_up.layers.mlp.SimpleMLP
+                init_args:
+                  dims:
+                    - 768
+                    - 3072
+                    - 768
+                  activation: gelu
+        decoder_mlp:
+          class_path: vit_up.layers.smart_module_list.SmartModuleList
+          init_args:
+            n_blocks: 7
+            block_class_path: vit_up.layers.mlp.SimpleMLP
+            block_init_args:
+              input_layernorm: true
+              dims:
+                - 768
+                - 768
+    backbone_lora_config:
+      r: 16
+      lora_alpha: 32
+      lora_dropout: 0.05
+      bias: none
+      target_modules:
+        - patch_embeddings
+        - q_proj
+        - k_proj
+        - v_proj
+        - o_proj
+    supervision_strategy:
+      class_path: vit_up.supervision.strategies.multi_scale.MultiScaleSupervision
+      init_args:
+        min_embd_size: 14
+        n_iters: 3
+        scale: 2
+        block_chunk_size: 49
+        patch_size: 16
+        mode: mean
+    loss_fn:
+      class_path: vit_up.supervision.losses.MultiScaleAlignedFeatureLoss
+      init_args:
+        layer_weights:
+          - 1.0
+          - 1.0
+          - 1.0
+          - 1.0
+          - 1.0
+          - 1.0
+          - 1.0
+        scale_weights:
+          - 1.0
+          - 1.0
+          - 1.0
+        dist_module_args:
+          - class_path: vit_up.supervision.losses.L2DistLoss
+            init_args:
+              name: l2
+              apply_at: all
+              weight: 1.0
+              eps: 1.0e-05
+          - class_path: vit_up.supervision.losses.CosineDistLoss
+            init_args:
+              name: cos
+              apply_at: all
+              weight: 1.0
+              eps: 1.0e-05
+          - class_path: vit_up.supervision.losses.KLDistLoss
+            init_args:
+              name: kl
+              apply_at: all
+              weight: 1.0
+              eps: 1.0e-05
+              tau: 0.5
+    optimizer:
+      _class_path: torch.optim.AdamW
+      _init_args:
+        lr: 0.0002
+        weight_decay: 0.0
+    lr_scheduler:
+      scheduler:
+        _class_path: torch.optim.lr_scheduler.SequentialLR
+        _init_args:
+          schedulers:
+            - _class_path: torch.optim.lr_scheduler.LinearLR
+              _init_args:
+                start_factor: 0.01
+                end_factor: 1.0
+                total_iters: 2669
+            - _class_path: torch.optim.lr_scheduler.CosineAnnealingLR
+              _init_args:
+                T_max: 50712
+                eta_min: 1.0e-06
+          milestones:
+            - 2669
+      interval: step
+      frequency: 1
