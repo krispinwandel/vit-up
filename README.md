@@ -4,6 +4,13 @@ ViT-Up: Faithful Feature Upsampling for Vision Transformers
 
 Run all commands from the repository root.
 
+## Inference
+
+Try ViT-Up in Google Colab:
+[inference_example_colab.ipynb](https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb)
+
+For local usage, see [notebooks/inference_example.ipynb](notebooks/inference_example.ipynb).
+
 ## Training
 
 Train a ViT-Up model with PyTorch Lightning using one of the run configs:
