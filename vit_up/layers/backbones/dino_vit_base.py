@@ -46,7 +46,7 @@ class DinoViTBackboneBase(nn.Module, ABC):
 
     @staticmethod
     def _unwrap_hf_backbone(hf_model: Any) -> Any:
-        required_attrs = ("embeddings", "layer")
+        required_attrs = ("embeddings", "rope_embeddings", "layer", "norm")
 
         def has_backbone_interface(candidate: Any) -> bool:
             return all(hasattr(candidate, attr) for attr in required_attrs)
@@ -66,7 +66,11 @@ class DinoViTBackboneBase(nn.Module, ABC):
             if has_backbone_interface(candidate):
                 return candidate
 
-        return cast(Any, base_model if base_model is not None else hf_model)
+        candidate_types = ", ".join(type(candidate).__name__ for candidate in candidates)
+        raise AttributeError(
+            "Could not find a Hugging Face DINO backbone object exposing "
+            f"{required_attrs}. Checked: {candidate_types}."
+        )
 
     @staticmethod
     def _compute_backbone_hidden_states(
