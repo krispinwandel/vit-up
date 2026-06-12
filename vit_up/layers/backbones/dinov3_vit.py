@@ -316,8 +316,15 @@ class DINOv3ViT(DinoViTBackboneBase):
             )
 
         model = cls(model_config)
-        hf_backbone = cls._unwrap_hf_backbone(hf_model)
+        try:
+            hf_backbone = cls._unwrap_hf_backbone(hf_model)
+            cls._load_from_hf_module_tree(model, hf_backbone)
+        except AttributeError:
+            cls._load_from_hf_state_dict(model, hf_model)
+        return model
 
+    @classmethod
+    def _load_from_hf_module_tree(cls, model: "DINOv3ViT", hf_backbone: Any) -> None:
         cls._load_module(model.embeddings, hf_backbone.embeddings, strict=True)
         cls._load_module(
             model.rope_embeddings, hf_backbone.rope_embeddings, strict=True
@@ -337,7 +344,61 @@ class DINOv3ViT(DinoViTBackboneBase):
             cls._load_module(dst_layer.mlp, src_layer.mlp)
             cls._load_module(dst_layer.layer_scale2, src_layer.layer_scale2)
         cls._load_module(model.norm, hf_backbone.norm)
-        return model
+
+    @classmethod
+    def _load_from_hf_state_dict(cls, model: "DINOv3ViT", hf_model: Any) -> None:
+        hf_state_dict = cast(Dict[str, torch.Tensor], hf_model.state_dict())
+        model_state_keys = set(model.state_dict().keys())
+        candidate_prefixes = (
+            "",
+            "model.",
+            "base_model.",
+            "base_model.model.",
+            "dinov3_vit.",
+            "base_model.dinov3_vit.",
+            "base_model.model.dinov3_vit.",
+        )
+
+        best_state_dict: Dict[str, torch.Tensor] = {}
+        best_prefix = ""
+        best_matches = -1
+        for prefix in candidate_prefixes:
+            stripped_state_dict = {
+                key.removeprefix(prefix): value
+                for key, value in hf_state_dict.items()
+                if key.startswith(prefix)
+            }
+            matches = sum(1 for key in stripped_state_dict if key in model_state_keys)
+            if matches > best_matches:
+                best_state_dict = stripped_state_dict
+                best_prefix = prefix
+                best_matches = matches
+
+        if best_matches <= 0:
+            sample_keys = ", ".join(list(hf_state_dict.keys())[:10])
+            raise AttributeError(
+                "Could not map Hugging Face DINOv3 state_dict to the local "
+                f"DINOv3ViT module. Sample HF keys: {sample_keys}"
+            )
+
+        try:
+            missing_keys, unexpected_keys = model.load_state_dict(
+                best_state_dict,
+                strict=False,
+                assign=True,
+            )
+        except TypeError:
+            missing_keys, unexpected_keys = model.load_state_dict(
+                best_state_dict,
+                strict=False,
+            )
+
+        if missing_keys:
+            raise AttributeError(
+                "Could not load all required DINOv3 weights from the Hugging Face "
+                f"state_dict using prefix {best_prefix!r}. Missing keys: "
+                f"{list(missing_keys)[:20]}"
+            )
 
     @classmethod
     def init_from_hf(
