@@ -348,7 +348,6 @@ class DINOv3ViT(DinoViTBackboneBase):
     @classmethod
     def _load_from_hf_state_dict(cls, model: "DINOv3ViT", hf_model: Any) -> None:
         hf_state_dict = cast(Dict[str, torch.Tensor], hf_model.state_dict())
-        model_state_keys = set(model.state_dict().keys())
         candidate_prefixes = (
             "",
             "model.",
@@ -359,45 +358,48 @@ class DINOv3ViT(DinoViTBackboneBase):
             "base_model.model.dinov3_vit.",
         )
 
-        best_state_dict: Dict[str, torch.Tensor] = {}
-        best_prefix = ""
-        best_matches = -1
-        for prefix in candidate_prefixes:
-            stripped_state_dict = {
-                key.removeprefix(prefix): value
-                for key, value in hf_state_dict.items()
-                if key.startswith(prefix)
-            }
-            matches = sum(1 for key in stripped_state_dict if key in model_state_keys)
-            if matches > best_matches:
-                best_state_dict = stripped_state_dict
-                best_prefix = prefix
-                best_matches = matches
+        mapped_state_dict: Dict[str, torch.Tensor] = {}
+        missing_keys: list[str] = []
+        for key in model.state_dict().keys():
+            for prefix in candidate_prefixes:
+                hf_key = f"{prefix}{key}"
+                if hf_key in hf_state_dict:
+                    mapped_state_dict[key] = hf_state_dict[hf_key]
+                    break
+            else:
+                missing_keys.append(key)
 
-        if best_matches <= 0:
+        if not mapped_state_dict:
             sample_keys = ", ".join(list(hf_state_dict.keys())[:10])
             raise AttributeError(
                 "Could not map Hugging Face DINOv3 state_dict to the local "
                 f"DINOv3ViT module. Sample HF keys: {sample_keys}"
             )
 
+        if missing_keys:
+            raise AttributeError(
+                "Could not load all required DINOv3 weights from the Hugging Face "
+                "state_dict. Missing keys: "
+                f"{missing_keys[:20]}"
+            )
+
         try:
-            missing_keys, unexpected_keys = model.load_state_dict(
-                best_state_dict,
+            load_missing_keys, _ = model.load_state_dict(
+                mapped_state_dict,
                 strict=False,
                 assign=True,
             )
         except TypeError:
-            missing_keys, unexpected_keys = model.load_state_dict(
-                best_state_dict,
+            load_missing_keys, _ = model.load_state_dict(
+                mapped_state_dict,
                 strict=False,
             )
 
-        if missing_keys:
+        if load_missing_keys:
             raise AttributeError(
                 "Could not load all required DINOv3 weights from the Hugging Face "
-                f"state_dict using prefix {best_prefix!r}. Missing keys: "
-                f"{list(missing_keys)[:20]}"
+                "state_dict. Missing keys after load_state_dict: "
+                f"{list(load_missing_keys)[:20]}"
             )
 
     @classmethod
