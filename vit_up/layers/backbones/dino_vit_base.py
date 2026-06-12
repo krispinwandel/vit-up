@@ -46,13 +46,27 @@ class DinoViTBackboneBase(nn.Module, ABC):
 
     @staticmethod
     def _unwrap_hf_backbone(hf_model: Any) -> Any:
-        hf_backbone = cast(
-            Any,
-            hf_model.base_model if hasattr(hf_model, "base_model") else hf_model,
-        )
-        if hasattr(hf_backbone, "model"):
-            hf_backbone = hf_backbone.model
-        return hf_backbone
+        required_attrs = ("embeddings", "layer")
+
+        def has_backbone_interface(candidate: Any) -> bool:
+            return all(hasattr(candidate, attr) for attr in required_attrs)
+
+        candidates = [hf_model]
+
+        base_model = getattr(hf_model, "base_model", None)
+        if base_model is not None and base_model is not hf_model:
+            candidates.append(base_model)
+
+        for candidate in list(candidates):
+            nested_model = getattr(candidate, "model", None)
+            if nested_model is not None and nested_model is not candidate:
+                candidates.append(nested_model)
+
+        for candidate in candidates:
+            if has_backbone_interface(candidate):
+                return candidate
+
+        return cast(Any, base_model if base_model is not None else hf_model)
 
     @staticmethod
     def _compute_backbone_hidden_states(
