@@ -21,7 +21,6 @@ from vit_up.model.vit_up import ViTUp
 from vit_up.layers.backbones.dinov3_vit import DINOv3ViT
 from vit_up.utils.state_dict_migration import migrate_vit_up_state_dict_keys
 
-
 HF_REPO_ID = "Krispin/vit-up"
 
 MODEL_SPECS: dict[str, dict[str, str]] = {
@@ -94,7 +93,8 @@ class ViTUpWrapper(nn.Module):
 
         # Load ViTUp model architecture from config (weights will be loaded separately)
         self.vit_up = self._create_vit_up_model(self._vit_up_config)
-        self.vit_up = self.vit_up.to(device=device, dtype=self.dtype)
+        self.vit_up = self.vit_up.to(device=device, dtype=self.dtype).eval()
+        self.vit_up.compile()
 
         self._load_model_weights(
             repo_id=HF_REPO_ID,
@@ -285,9 +285,12 @@ class ViTUpWrapper(nn.Module):
 
         if backbone_state_dict:
             self.backbone.load_state_dict(backbone_state_dict, strict=False)
+        self.backbone.compile()
 
         if vit_up_state_dict:
-            migrated_vit_up_state_dict = migrate_vit_up_state_dict_keys(vit_up_state_dict)
+            migrated_vit_up_state_dict = migrate_vit_up_state_dict_keys(
+                vit_up_state_dict
+            )
             self.vit_up.load_state_dict(migrated_vit_up_state_dict, strict=False)
 
         self.vit_up = self.vit_up.eval()
@@ -360,30 +363,28 @@ class ViTUpWrapper(nn.Module):
             query_chunk_size = query_coords.shape[1]
 
         # Cast to the model inference dtype.
-        images = images.to(device=self.device, dtype=self.dtype)
+        images = images.to(device=self.device)
         query_coords = query_coords.to(device=self.device, dtype=self.dtype)
 
-        cache_data = self.vit_up.maybe_compute_cache_data(
-            pixel_values=images,
-            backbone=self.backbone,
-            hidden_layer_img_size=hidden_layer_img_size,
-        )
-
-        q_chunks: list[torch.Tensor | list[torch.Tensor]] = []
         autocast_context = (
             torch.autocast(device_type=self.device_type, dtype=torch.bfloat16)
             if self.use_bfloat16 and self.device_type in {"cuda", "cpu"}
             else nullcontext()
         )
 
-        # Forward pass in chunks to reduce memory use.
         with autocast_context:
+            cache_data = self.vit_up.maybe_compute_cache_data(
+                pixel_values=images,
+                backbone=self.backbone,
+                hidden_layer_img_size=hidden_layer_img_size,
+            )
+
+            q_chunks = []
             for q_start in range(0, query_coords.shape[1], query_chunk_size):
                 q_end = min(q_start + query_chunk_size, query_coords.shape[1])
-                q_xy_normalized_chunk = query_coords[:, q_start:q_end, :]
                 q_layers_chunk = self.vit_up(
                     pixel_values=images,
-                    q_xy_normalized=q_xy_normalized_chunk,
+                    q_xy_normalized=query_coords[:, q_start:q_end, :],
                     backbone=self.backbone,
                     hidden_layer_img_size=hidden_layer_img_size,
                     cache_data=cache_data,

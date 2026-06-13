@@ -6,3 +6,4 @@ model_name: vit_up_dinov3_splus
 out_size: null
 name: vit_up_dinov3_splus
 feature_dim: 384
+query_chunk_size: 200704
