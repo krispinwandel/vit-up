@@ -41,6 +41,7 @@
         var(--bg);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.55;
+      overflow-x: hidden;
     }
 
     a {
@@ -105,6 +106,17 @@
       gap: 34px;
     }
 
+    .hero-grid > *,
+    .hero-media,
+    .hero-code,
+    .stat,
+    .metric,
+    .bar-panel,
+    .table-wrap,
+    .bio-card {
+      min-width: 0;
+    }
+
     .hero-media {
       display: grid;
       gap: 16px;
@@ -155,6 +167,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+      max-width: 100%;
       min-height: 42px;
       padding: 0 16px;
       border: 1px solid var(--ink);
@@ -214,6 +227,7 @@
       color: var(--muted);
       background: var(--paper);
       font-size: 13px;
+      overflow-wrap: anywhere;
     }
 
     .stats {
@@ -406,9 +420,11 @@
 
     .table-wrap {
       overflow-x: auto;
+      max-width: 100%;
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: var(--paper);
+      -webkit-overflow-scrolling: touch;
     }
 
     table {
@@ -513,6 +529,7 @@
 
     .hero-code pre {
       box-shadow: 0 14px 34px rgba(24, 23, 22, 0.14);
+      padding-right: 56px;
     }
 
     .copy-code {
@@ -616,6 +633,7 @@
       margin: 10px 0 0;
       color: var(--muted);
       font-size: 15px;
+      overflow-wrap: anywhere;
     }
 
     footer {
@@ -647,11 +665,36 @@
         grid-template-columns: repeat(2, 1fr);
       }
 
+      .hero {
+        padding-top: 52px;
+      }
+
     }
 
     @media (max-width: 560px) {
       .shell {
         width: min(var(--max), calc(100% - 22px));
+      }
+
+      .topbar {
+        position: static;
+      }
+
+      nav {
+        gap: 10px;
+        font-size: 13px;
+      }
+
+      h1 {
+        font-size: clamp(46px, 18vw, 70px);
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .button {
+        width: 100%;
       }
 
       .hero {
@@ -665,10 +708,22 @@
 
       .bio-card {
         grid-template-columns: 1fr;
+        padding: 16px;
+      }
+
+      .bio-card img {
+        width: 120px;
       }
 
       .bar-row {
-        grid-template-columns: 88px minmax(0, 1fr) 48px;
+        grid-template-columns: minmax(74px, 0.9fr) minmax(72px, 1fr) 42px;
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      pre {
+        font-size: 12px;
+        padding-left: 14px;
       }
     }
   </style>
