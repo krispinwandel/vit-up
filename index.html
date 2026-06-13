@@ -431,6 +431,7 @@
       width: 100%;
       min-width: 880px;
       border-collapse: collapse;
+      border-spacing: 0;
       font-size: 14px;
     }
 
@@ -445,10 +446,14 @@
 
     th,
     td {
-      padding: 10px 12px;
+      padding: 11px 12px;
       border-bottom: 1px solid var(--line);
       text-align: right;
       white-space: nowrap;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
     }
 
     th {
@@ -460,26 +465,39 @@
     }
 
     thead th {
+      border-bottom-color: #cfc6b8;
       text-align: center;
     }
 
+    thead tr:first-child th:first-child,
     td:first-child {
       position: sticky;
       left: 0;
-      z-index: 1;
+      z-index: 2;
       text-align: left;
-      background: inherit;
+      box-shadow: 8px 0 14px -14px rgba(24, 23, 22, 0.55);
+    }
+
+    tbody td:first-child {
+      min-width: 168px;
+      background: var(--paper);
+      font-weight: 760;
     }
 
     thead tr:first-child th:first-child {
-      position: sticky;
-      left: 0;
-      z-index: 1;
       text-align: center;
-      background: inherit;
+    }
+
+    thead tr:first-child th:first-child {
+      z-index: 4;
+      background: #f1ebe1;
     }
 
     tbody tr:nth-child(even) {
+      background: #fbf8f1;
+    }
+
+    tbody tr:nth-child(even) td:first-child {
       background: #fbf8f1;
     }
 
@@ -488,10 +506,18 @@
       font-weight: 850;
     }
 
+    tbody tr.ours td:first-child {
+      background: #fff2ed;
+    }
+
     tbody tr.gain {
       color: #137065;
       background: #eff8f4;
       font-weight: 850;
+    }
+
+    tbody tr.gain td:first-child {
+      background: #eff8f4;
     }
 
     .best {
@@ -689,6 +715,10 @@
         font-size: clamp(46px, 18vw, 70px);
       }
 
+      section {
+        padding: 36px 0;
+      }
+
       .actions {
         flex-direction: column;
       }
@@ -698,7 +728,8 @@
       }
 
       .hero {
-        padding-top: 40px;
+        padding-top: 32px;
+        padding-bottom: 28px;
       }
 
       .stats,
@@ -719,6 +750,33 @@
         grid-template-columns: minmax(74px, 0.9fr) minmax(72px, 1fr) 42px;
         gap: 8px;
         font-size: 12px;
+      }
+
+      .hero-figure,
+      #method .figure-panel {
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .hero-figure img,
+      #method .figure-panel img {
+        width: 100%;
+        margin: 0;
+        padding: 11px;
+        border-radius: 0;
+        background: #fff;
+      }
+
+      .hero-figure .caption,
+      #method .figure-panel .caption {
+        margin: 0;
+        padding-right: 11px;
+        padding-left: 11px;
       }
 
       pre {
