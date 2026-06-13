@@ -435,6 +435,10 @@
       font-size: 14px;
     }
 
+    .table-wrap.compact-method table {
+      min-width: 680px;
+    }
+
     caption {
       caption-side: top;
       padding: 14px 16px;
@@ -475,6 +479,10 @@
       left: 0;
       z-index: 2;
       text-align: left;
+    }
+
+    .table-wrap.is-scrolled thead tr:first-child th:first-child,
+    .table-wrap.is-scrolled td:first-child {
       box-shadow: 8px 0 14px -14px rgba(24, 23, 22, 0.55);
     }
 
@@ -482,6 +490,12 @@
       min-width: 168px;
       background: var(--paper);
       font-weight: 760;
+    }
+
+    .compact-method thead tr:first-child th:first-child,
+    .compact-method tbody td:first-child {
+      width: 1%;
+      min-width: 0;
     }
 
     thead tr:first-child th:first-child {
@@ -976,7 +990,7 @@ query_features = model(pixel_values, query_coords)</code></pre>
 
         <div style="height: 18px"></div>
 
-        <div class="table-wrap" aria-label="Correspondence results table">
+        <div class="table-wrap compact-method" aria-label="Correspondence results table">
           <table>
             <caption>Correspondence results on DINOv3-S+. PCK is reported at different tolerance thresholds; higher is better for all metrics.</caption>
             <thead>
@@ -1075,6 +1089,15 @@ query_features = model(pixel_values, query_coords)</code></pre>
           if (copied) showCopied();
         }
       });
+    });
+
+    document.querySelectorAll(".table-wrap").forEach((wrap) => {
+      const updateScrollState = () => {
+        wrap.classList.toggle("is-scrolled", wrap.scrollLeft > 0);
+      };
+
+      updateScrollState();
+      wrap.addEventListener("scroll", updateScrollState, { passive: true });
     });
   </script>
 </body>
