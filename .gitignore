@@ -1,0 +1,11 @@
+scripts/
+*.lock
+*.egg-info/
+ignore/
+test/
+__pycache__/
+*.pyc
+.agents/
+.codex/
+.venv/
+vit_up/

@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ViT-Up: Faithful Feature Upsampling for Vision Transformers">
+  <meta property="og:title" content="ViT-Up">
+  <meta property="og:description" content="Faithful feature upsampling for dense Vision Transformer representations.">
+  <meta property="og:image" content="assets/model_overview.jpg">
+  <title>ViT-Up | Faithful Feature Upsampling for Vision Transformers</title>
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --paper: #fffdf8;
+      --ink: #181716;
+      --muted: #62605b;
+      --line: #ded8ce;
+      --soft: #eee7dd;
+      --accent: #b64232;
+      --accent-2: #0d766e;
+      --accent-3: #b37612;
+      --shadow: 0 22px 70px rgba(24, 23, 22, 0.12);
+      --radius: 8px;
+      --max: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(182, 66, 50, 0.09), transparent 360px),
+        radial-gradient(circle at 86% 8%, rgba(13, 118, 110, 0.16), transparent 26rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--accent);
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+    }
+
+    .shell {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(222, 216, 206, 0.75);
+      background: rgba(247, 244, 238, 0.88);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar .shell {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 62px;
+      gap: 24px;
+    }
+
+    .brand {
+      font-size: 16px;
+      font-weight: 850;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .hero {
+      padding: 72px 0 38px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
+      align-items: center;
+      gap: 34px;
+    }
+
+    .hero-media {
+      display: grid;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 18px 0 16px;
+      max-width: 780px;
+      font-size: clamp(48px, 9vw, 104px);
+      line-height: 0.9;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      color: #34312d;
+      font-size: clamp(16px, 1.7vw, 21px);
+      line-height: 1.38;
+      font-weight: 620;
+    }
+
+    .authors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin: -4px 0 18px;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 720;
+    }
+
+    .authors a {
+      color: #3a3630;
+      text-decoration: underline;
+      text-decoration-color: rgba(182, 66, 50, 0.35);
+      text-underline-offset: 4px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid var(--ink);
+      border-radius: 6px;
+      background: var(--ink);
+      color: #fffdf8;
+      font-size: 14px;
+      font-weight: 760;
+      box-shadow: 0 10px 24px rgba(24, 23, 22, 0.16);
+    }
+
+    .button svg {
+      width: 22px;
+      height: 17px;
+      flex: 0 0 auto;
+    }
+
+    .button svg:last-child:not(:first-child) {
+      width: 15px;
+      height: 15px;
+    }
+
+    .button:hover {
+      color: #fffdf8;
+      transform: translateY(-1px);
+    }
+
+    .button.secondary {
+      border-color: var(--line);
+      background: rgba(255, 253, 248, 0.86);
+      color: var(--ink);
+      box-shadow: none;
+    }
+
+    .hero-figure {
+      position: relative;
+      padding: clamp(14px, 2vw, 24px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero-figure img {
+      width: 100%;
+      aspect-ratio: 2664 / 1244;
+      object-fit: contain;
+      background: #fff;
+      margin: 0 auto;
+    }
+
+    .caption {
+      margin: clamp(14px, 2vw, 24px) calc(clamp(14px, 2vw, 24px) * -1) calc(clamp(14px, 2vw, 24px) * -1);
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      background: var(--paper);
+      font-size: 13px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 34px;
+    }
+
+    .stat {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 253, 248, 0.72);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .stat em {
+      display: block;
+      margin-top: 6px;
+      color: var(--accent-2);
+      font-size: 13px;
+      font-style: normal;
+      font-weight: 800;
+    }
+
+    section {
+      padding: 54px 0;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.42fr) minmax(0, 0.58fr);
+      gap: 32px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .section-head.stacked {
+      display: block;
+      max-width: 820px;
+    }
+
+    .section-head.stacked p {
+      margin-top: 12px;
+    }
+
+    .figure-panel,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: 0 16px 50px rgba(24, 23, 22, 0.08);
+      overflow: hidden;
+    }
+
+    .figure-panel {
+      padding: clamp(14px, 2vw, 24px);
+      background: #fff;
+    }
+
+    .figure-panel img {
+      width: 100%;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .panel {
+      padding: 22px;
+    }
+
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+    }
+
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+    }
+
+    .metric .label {
+      min-height: 40px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 730;
+    }
+
+    .metric .value {
+      margin-top: 8px;
+      color: var(--accent);
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 850;
+    }
+
+    .metric .note {
+      margin-top: 8px;
+      color: #3c3934;
+      font-size: 13px;
+    }
+
+    .bars {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin: 12px 0 20px;
+    }
+
+    .bar-panel {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 253, 248, 0.78);
+    }
+
+    .bar-panel h3 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr) 54px;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .track {
+      height: 10px;
+      border-radius: 999px;
+      background: #e4ddd3;
+      overflow: hidden;
+    }
+
+    .fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-3));
+    }
+
+    .fill.teal {
+      background: linear-gradient(90deg, var(--accent-2), #49a391);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+    }
+
+    table {
+      width: 100%;
+      min-width: 880px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    caption {
+      caption-side: top;
+      padding: 14px 16px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #3a3630;
+      background: #f1ebe1;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    thead th {
+      text-align: center;
+    }
+
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      text-align: left;
+      background: inherit;
+    }
+
+    thead tr:first-child th:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      text-align: center;
+      background: inherit;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fbf8f1;
+    }
+
+    tbody tr.ours {
+      background: #fff2ed;
+      font-weight: 850;
+    }
+
+    tbody tr.gain {
+      color: #137065;
+      background: #eff8f4;
+      font-weight: 850;
+    }
+
+    .best {
+      color: var(--accent) !important;
+      font-weight: 850;
+    }
+
+    .second {
+      color: #80520f !important;
+      font-weight: 800;
+    }
+
+    code,
+    pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #15181d;
+      color: #e9edf2;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .hero-code {
+      position: relative;
+      max-width: 100%;
+      margin: 22px 0 0;
+    }
+
+    .hero-code pre {
+      box-shadow: 0 14px 34px rgba(24, 23, 22, 0.14);
+    }
+
+    .copy-code {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(233, 237, 242, 0.18);
+      border-radius: 6px;
+      color: #d8dee8;
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+    }
+
+    .copy-code:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .copy-code svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .copy-code .copy-check,
+    .copy-code.is-copied .copy-icon {
+      display: none;
+    }
+
+    .copy-code.is-copied {
+      color: #a7d979;
+      border-color: rgba(167, 217, 121, 0.38);
+      background: rgba(167, 217, 121, 0.12);
+    }
+
+    .copy-code.is-copied .copy-check {
+      display: block;
+    }
+
+    .code-keyword {
+      color: #ff8f6b;
+      font-weight: 750;
+    }
+
+    .code-string {
+      color: #a7d979;
+    }
+
+    .code-number {
+      color: #e7bd64;
+    }
+
+    .code-call {
+      color: #7dcfff;
+    }
+
+    .code-builtin {
+      color: #c7a6ff;
+    }
+
+    .code-comment {
+      color: #83909f;
+      font-style: italic;
+    }
+
+    .people-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .bio-card {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: 0 12px 34px rgba(24, 23, 22, 0.07);
+    }
+
+    .bio-card img {
+      width: 132px;
+      height: auto;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    .bio-card h3 {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.2;
+    }
+
+    .bio-card p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    footer {
+      padding: 42px 0 54px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .hero-grid,
+      .section-head,
+      .bars {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar .shell {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 12px 0;
+      }
+
+      nav {
+        justify-content: flex-start;
+      }
+
+      .stats,
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        width: min(var(--max), calc(100% - 22px));
+      }
+
+      .hero {
+        padding-top: 40px;
+      }
+
+      .stats,
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bio-card {
+        grid-template-columns: 1fr;
+      }
+
+      .bar-row {
+        grid-template-columns: 88px minmax(0, 1fr) 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell">
+      <a class="brand" href="#top">ViT-Up</a>
+      <nav aria-label="Primary navigation">
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#people">People</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="shell hero-grid">
+        <div>
+          <h1>ViT-Up</h1>
+          <div class="authors" aria-label="Authors">
+            <a href="https://dub.sh/vitup-kw">Krispin Wandel</a>
+            <a href="https://robotics.sjtu.edu.cn/en/minglu/465.html">Jingchuan Wang</a>
+            <a href="https://irmv.sjtu.edu.cn/wanghesheng">Hesheng Wang</a>
+          </div>
+          <p class="subtitle">Faithful Feature Upsampling for Vision Transformers</p>
+          <div id="quickstart" class="hero-code" aria-label="Quick start Python example" data-code='model = torch.hub.load(
+    "krispinwandel/vit-up",
+    "vit_up_dinov3_splus",
+    pretrained=True,
+    trust_repo=True,
+).eval()
+
+query_features = model(pixel_values, query_coords)'>
+            <button class="copy-code" type="button" aria-label="Copy Quick Start code">
+              <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="14" height="14" x="8" y="8" rx="2"/>
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+              </svg>
+              <svg class="copy-check" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m20 6-11 11-5-5"/>
+              </svg>
+            </button>
+            <pre><code>model = torch.hub.<span class="code-call">load</span>(
+    <span class="code-string">"krispinwandel/vit-up"</span>,
+    <span class="code-string">"vit_up_dinov3_splus"</span>,
+    pretrained=<span class="code-builtin">True</span>,
+    trust_repo=<span class="code-builtin">True</span>,
+).<span class="code-call">eval</span>()
+
+query_features = model(pixel_values, query_coords)</code></pre>
+          </div>
+          <div class="actions">
+            <a class="button" href="https://dub.sh/vitup-github" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.09.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.56 2.35 1.11 2.92.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.35 9.35 0 0 1 12 6.94c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.04 10.04 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/>
+              </svg>
+              GitHub
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h6v6"/>
+                <path d="M10 14 21 3"/>
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              </svg>
+            </a>
+            <a class="button secondary" href="https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Try in Google Colab">
+              <svg viewBox="0 0 32 20" aria-hidden="true" fill="none">
+                <path d="M12.8 5.1 9.2 1.6A7.7 7.7 0 1 0 9.2 18l3.6-3.5" stroke="#f9ab00" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="m19.2 14.9 3.6 3.5A7.7 7.7 0 1 0 22.8 2l-3.6 3.5" stroke="#e8710a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="m12.9 14.8 6.2-9.6" stroke="#f9ab00" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+              Try in Colab
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h6v6"/>
+                <path d="M10 14 21 3"/>
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div class="hero-media">
+          <figure class="hero-figure">
+            <img src="assets/model_overview.jpg" alt="ViT-Up model overview figure">
+            <figcaption class="caption">ViT-Up is an implicit feature upsampler for Vision Transformers that predicts backbone-aligned features at arbitrary continuous image coordinates.</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="shell stats" aria-label="Result highlights">
+        <div class="stat"><strong>65.41</strong><span>Cityscapes mIoU</span><em>+2.07 vs. best baseline</em></div>
+        <div class="stat"><strong>55.44</strong><span>SPair-71k PCK@0.10</span><em>+4.17 vs. best baseline</em></div>
+        <div class="stat"><strong>62.72</strong><span>COCO depth &delta;1</span><em>+0.55 vs. best baseline</em></div>
+        <div class="stat"><strong>80.81</strong><span>NAVI PCK@0.10</span><em>+0.50 vs. best baseline</em></div>
+      </div>
+    </section>
+
+    <section id="method">
+      <div class="shell">
+        <div class="section-head stacked">
+          <h2>Method</h2>
+          <p>ViT-Up builds query features from intermediate ViT hidden states, reducing feature leakage while preserving alignment with the backbone feature space.</p>
+        </div>
+        <figure class="figure-panel">
+          <img src="assets/architecture.jpg" alt="ViT-Up architecture diagram">
+          <figcaption class="caption">Training uses frozen multi-resolution ViT teacher features to supervise LoRA-adapted student features; query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="results">
+      <div class="shell">
+        <div class="section-head stacked">
+          <h2>Result Highlights</h2>
+          <p>Across dense prediction and correspondence benchmarks, ViT-Up consistently improves over state-of-the-art image-guided upsamplers, with gains up to +2.07 mIoU on Cityscapes and +4.17 PCK@0.10 on SPair-71k using DINOv3-S+.</p>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="label">Best semantic segmentation gain</div>
+            <div class="value">+2.07</div>
+            <div class="note">Cityscapes mIoU</div>
+          </div>
+          <div class="metric">
+            <div class="label">Best depth improvement</div>
+            <div class="value">+1.33</div>
+            <div class="note">COCO RMSE reduction</div>
+          </div>
+          <div class="metric">
+            <div class="label">Best semantic correspondence gain</div>
+            <div class="value">+5.11</div>
+            <div class="note">SPair-71k PCK@0.05</div>
+          </div>
+          <div class="metric">
+            <div class="label">Best geometric correspondence gain</div>
+            <div class="value">+0.50</div>
+            <div class="note">NAVI PCK@0.10</div>
+          </div>
+        </div>
+
+        <div class="bars" aria-label="Gain visualization">
+          <article class="bar-panel">
+            <h3>Probing gains vs. best baseline</h3>
+            <div class="bar-row"><span>COCO mIoU</span><div class="track"><span class="fill" style="width: 11%"></span></div><span>+0.23</span></div>
+            <div class="bar-row"><span>VOC mIoU</span><div class="track"><span class="fill" style="width: 79%"></span></div><span>+1.63</span></div>
+            <div class="bar-row"><span>ADE mIoU</span><div class="track"><span class="fill" style="width: 24%"></span></div><span>+0.49</span></div>
+            <div class="bar-row"><span>City mIoU</span><div class="track"><span class="fill" style="width: 100%"></span></div><span>+2.07</span></div>
+            <div class="bar-row"><span>Depth d1</span><div class="track"><span class="fill" style="width: 27%"></span></div><span>+0.55</span></div>
+            <div class="bar-row"><span>Depth RMSE</span><div class="track"><span class="fill" style="width: 64%"></span></div><span>+1.33</span></div>
+          </article>
+          <article class="bar-panel">
+            <h3>Correspondence gains vs. best baseline</h3>
+            <div class="bar-row"><span>SPair .10</span><div class="track"><span class="fill teal" style="width: 82%"></span></div><span>+4.17</span></div>
+            <div class="bar-row"><span>SPair .05</span><div class="track"><span class="fill teal" style="width: 100%"></span></div><span>+5.11</span></div>
+            <div class="bar-row"><span>SPair .01</span><div class="track"><span class="fill teal" style="width: 68%"></span></div><span>+3.47</span></div>
+            <div class="bar-row"><span>NAVI .10</span><div class="track"><span class="fill teal" style="width: 10%"></span></div><span>+0.50</span></div>
+            <div class="bar-row"><span>NAVI .05</span><div class="track"><span class="fill teal" style="width: 8%"></span></div><span>+0.41</span></div>
+            <div class="bar-row"><span>NAVI .01</span><div class="track"><span class="fill teal" style="width: 5%"></span></div><span>+0.25</span></div>
+          </article>
+        </div>
+
+        <div class="table-wrap" aria-label="Probing results table">
+          <table>
+            <caption>Probing results on DINOv3-S+. Higher is better for mIoU, accuracy, and delta1; lower is better for RMSE.</caption>
+            <thead>
+              <tr>
+                <th rowspan="2">Method</th>
+                <th colspan="2">COCO Seg.</th>
+                <th colspan="2">VOC</th>
+                <th colspan="2">ADE20K</th>
+                <th colspan="2">Cityscapes</th>
+                <th colspan="2">COCO Depth</th>
+              </tr>
+              <tr>
+                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                <th>&delta;1 &uarr;</th><th>RMSE &darr;</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Bilinear</td><td>63.10</td><td>81.85</td><td>84.88</td><td>96.45</td><td>43.27</td><td>76.17</td><td>61.36</td><td>93.44</td><td>61.52</td><td>62.80</td></tr>
+              <tr><td>JAFAR</td><td>62.50</td><td>81.50</td><td>83.88</td><td>96.16</td><td>42.48</td><td>75.81</td><td>57.78</td><td>92.47</td><td>60.64</td><td>64.92</td></tr>
+              <tr><td>AnyUp</td><td>63.03</td><td>81.83</td><td>84.54</td><td>96.34</td><td>42.77</td><td>76.02</td><td>58.96</td><td>92.93</td><td>61.66</td><td>62.62</td></tr>
+              <tr><td>UpLiFT</td><td>63.79</td><td>82.28</td><td>85.69</td><td class="second">96.72</td><td class="second">44.24</td><td class="second">76.71</td><td>63.08</td><td>93.94</td><td>61.84</td><td>61.79</td></tr>
+              <tr><td>NAF</td><td class="second">63.86</td><td class="second">82.33</td><td class="second">85.84</td><td class="second">96.72</td><td>44.17</td><td>76.69</td><td class="second">63.34</td><td class="second">94.13</td><td class="second">62.17</td><td class="second">61.15</td></tr>
+              <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">64.09</td><td class="best">82.49</td><td class="best">87.47</td><td class="best">97.14</td><td class="best">44.73</td><td class="best">77.06</td><td class="best">65.41</td><td class="best">94.73</td><td class="best">62.72</td><td class="best">59.82</td></tr>
+              <tr class="gain"><td>Gain vs. best baseline</td><td>+0.23</td><td>+0.16</td><td>+1.63</td><td>+0.42</td><td>+0.49</td><td>+0.35</td><td>+2.07</td><td>+0.60</td><td>+0.55</td><td>+1.33</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="height: 18px"></div>
+
+        <div class="table-wrap" aria-label="Correspondence results table">
+          <table>
+            <caption>Correspondence results on DINOv3-S+. PCK is reported at different tolerance thresholds; higher is better for all metrics.</caption>
+            <thead>
+              <tr>
+                <th rowspan="2">Method</th>
+                <th colspan="3">SPair-71k</th>
+                <th colspan="3">NAVI</th>
+              </tr>
+              <tr>
+                <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
+                <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Bilinear</td><td class="second">51.27</td><td>33.74</td><td class="second">3.83</td><td>80.16</td><td class="second">51.18</td><td class="second">33.58</td></tr>
+              <tr><td>JAFAR</td><td>36.82</td><td>18.59</td><td>1.89</td><td>79.04</td><td>47.02</td><td>26.60</td></tr>
+              <tr><td>AnyUp</td><td>37.63</td><td>19.31</td><td>1.97</td><td class="second">80.31</td><td>48.78</td><td>28.37</td></tr>
+              <tr><td>UpLiFT</td><td>46.87</td><td>29.15</td><td>3.43</td><td>79.35</td><td>49.05</td><td>30.49</td></tr>
+              <tr><td>NAF</td><td>48.68</td><td class="second">33.96</td><td>2.89</td><td>80.03</td><td>50.29</td><td>31.62</td></tr>
+              <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">55.44</td><td class="best">39.07</td><td class="best">7.30</td><td class="best">80.81</td><td class="best">51.59</td><td class="best">33.83</td></tr>
+              <tr class="gain"><td>Gain vs. best baseline</td><td>+4.17</td><td>+5.11</td><td>+3.47</td><td>+0.50</td><td>+0.41</td><td>+0.25</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="people">
+      <div class="shell">
+        <div class="section-head stacked">
+          <h2>People</h2>
+        </div>
+        <div class="people-grid">
+          <article class="bio-card">
+            <img src="assets/krispin.png" alt="Krispin Wandel">
+            <div>
+              <h3><a href="https://dub.sh/vitup-kw">Krispin Wandel</a></h3>
+              <p>Krispin Wandel received the M.Sc. degree in computational science and engineering from ETH Zurich, Zurich, Switzerland. He is currently pursuing the Ph.D. degree with the Department of Automation, Shanghai Jiao Tong University, Shanghai, China, under the supervision of Prof. Hesheng Wang. His research interests include visual representation learning, dense prediction, semantic correspondence, and robotics.</p>
+            </div>
+          </article>
+          <article class="bio-card">
+            <img src="assets/jingchuan.png" alt="Jingchuan Wang">
+            <div>
+              <h3><a href="https://robotics.sjtu.edu.cn/en/minglu/465.html">Jingchuan Wang</a></h3>
+              <p>Jingchuan Wang received the Ph.D., M.Phil. and B.Eng. degree in Control Theory and Control Engineering from the Shanghai Jiao Tong University (SJTU), Shanghai, China, in 2002, 2005 and 2014, respectively. Now, he is a Professor in the School of Automation and Intelligent Sensing, and Institute of Medical Robotics at SJTU. He is also an IEEE senior member. His research interests include service robot, mobile robot's localization and navigation.</p>
+            </div>
+          </article>
+          <article class="bio-card">
+            <img src="assets/hesheng.png" alt="Hesheng Wang">
+            <div>
+              <h3><a href="https://irmv.sjtu.edu.cn/wanghesheng">Hesheng Wang</a></h3>
+              <p>Hesheng Wang (Senior Member, IEEE) received the B.Eng. degree in electrical engineering from the Harbin Institute of Technology, Harbin, China, in 2002, and the M.Phil. and Ph.D. degrees in automation and computer-aided engineering from the Chinese University of Hong Kong, Hong Kong, in 2004 and 2007, respectively. He is currently a Distinguished Professor with the School of Automation and Intelligent Sensing, Shanghai Jiao Tong University, Shanghai, China. His research interests include visual servoing, intelligent robotics, computer vision, and autonomous driving. Dr. Wang is an Associate Editor of Robotic Intelligence and Automation and the International Journal of Humanoid Robotics, a Senior Editor of the IEEE/ASME Transactions on Mechatronics, and Editor-in-Chief of Robot Learning. He served as an Associate Editor of IEEE Transactions on Robotics from 2015 to 2019 and IEEE Transactions on Automation Science and Engineering from 2021 to 2023. He was the General Chair of IEEE/RSJ IROS 2025, IEEE ROBIO 2022, and IEEE RCAR 2016.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="shell">
+      <span>ViT-Up: Faithful Feature Upsampling for Vision Transformers.</span>
+      <span> Code: <a href="https://dub.sh/vitup-github">dub.sh/vitup-github</a>.</span>
+    </div>
+  </footer>
+  <script>
+    document.querySelectorAll(".copy-code").forEach((button) => {
+      const showCopied = () => {
+        button.classList.add("is-copied");
+        button.setAttribute("aria-label", "Copied");
+        window.setTimeout(() => {
+          button.classList.remove("is-copied");
+          button.setAttribute("aria-label", "Copy Quick Start code");
+        }, 1400);
+      };
+
+      button.addEventListener("click", async () => {
+        const block = button.closest(".hero-code");
+        const code = block?.dataset.code;
+        if (!code) return;
+
+        try {
+          await navigator.clipboard.writeText(code);
+          showCopied();
+        } catch {
+          const area = document.createElement("textarea");
+          area.value = code;
+          area.setAttribute("readonly", "");
+          area.style.position = "fixed";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          const copied = document.execCommand("copy");
+          area.remove();
+          if (copied) showCopied();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
