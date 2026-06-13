@@ -85,7 +85,6 @@ class ViTUpUpsampler(UpsamplerBase):
         q_fts = self.vit_up(
             images=pixel_values_bchw,
             query_coords=q_xy_normalized,
-            hidden_layer_img_size=self.hidden_layer_img_size,
             query_chunk_size=query_chunk_size,
         )
         b, n_q, c = q_fts.shape

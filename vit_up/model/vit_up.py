@@ -128,13 +128,17 @@ class ViTUp(nn.Module):
 
     def maybe_compute_cache_data(
         self,
-        pixel_values: torch.Tensor,
+        pixel_values: Optional[torch.Tensor],
         backbone: Optional[DinoViTBackboneBase] = None,
         hidden_layer_img_size: Optional[int] = None,
         cache_data: Optional[dict] = None,
     ):
         if cache_data is not None:
             return cache_data
+        if pixel_values is None:
+            raise ValueError(
+                "pixel_values must be provided if cache_data is not provided."
+            )
         if backbone is None:
             raise ValueError("backbone must be provided if cache_data is not provided.")
         return self.compute_cache_data(
@@ -145,10 +149,10 @@ class ViTUp(nn.Module):
 
     def compute_query_embedding(
         self,
-        pixel_values,
-        q_xy_normalized,
-        backbone=None,
-        query_embedding_cache_data=None,
+        pixel_values: Optional[torch.Tensor],
+        q_xy_normalized: torch.Tensor,
+        backbone: Optional[DinoViTBackboneBase] = None,
+        query_embedding_cache_data: Any = None,
     ):
         query_embedding_cache_data = self.query_embedding.maybe_compute_cache_data(
             pixel_values=pixel_values,
@@ -165,7 +169,7 @@ class ViTUp(nn.Module):
 
     def forward(
         self,
-        pixel_values: torch.Tensor,
+        pixel_values: Optional[torch.Tensor],
         q_xy_normalized: torch.Tensor,
         backbone: Optional[DinoViTBackboneBase] = None,
         hidden_layer_img_size: Optional[int] = None,

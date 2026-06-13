@@ -16,9 +16,12 @@ import torch
 import torch.nn as nn
 from omegaconf import OmegaConf
 from peft import LoraConfig
+from PIL import Image
+import torchvision.transforms.v2 as T
 
 from vit_up.model.vit_up import ViTUp
 from vit_up.layers.backbones.dinov3_vit import DINOv3ViT
+from vit_up.utils.img_transforms import RESNET_IMAGE_MEAN, RESNET_IMAGE_STD
 from vit_up.utils.state_dict_migration import migrate_vit_up_state_dict_keys
 
 HF_REPO_ID = "Krispin/vit-up"
@@ -75,6 +78,15 @@ class ViTUpWrapper(nn.Module):
         self.dtype = torch.bfloat16 if use_bfloat16 else torch.float32
         self.hidden_layer_img_size = hidden_layer_img_size
         self.query_chunk_size = query_chunk_size
+        self._images: Optional[torch.Tensor] = None
+        self._cache_data: Optional[dict[str, Any]] = None
+        self._pil_image_transform = T.Compose(
+            [
+                T.ToImage(),
+                T.ToDtype(torch.float32, scale=True),
+                T.Normalize(mean=RESNET_IMAGE_MEAN, std=RESNET_IMAGE_STD),
+            ]
+        )
 
         self.model_config_path = self._resolve_model_config_path(self.model_name)
         self._model_config = self._load_model_config(self.model_config_path)
@@ -322,12 +334,67 @@ class ViTUpWrapper(nn.Module):
             )
         return vit_up_module
 
+    def _prepare_images(self, images: torch.Tensor | Image.Image) -> torch.Tensor:
+        if isinstance(images, Image.Image):
+            images = self._pil_image_transform(images).unsqueeze(0)
+        elif not isinstance(images, torch.Tensor):
+            raise TypeError(
+                "images must be a torch.Tensor or PIL.Image.Image, "
+                f"got {type(images)!r}."
+            )
+
+        if images.ndim == 3:
+            images = images.unsqueeze(0)
+        if images.ndim != 4:
+            raise ValueError(
+                "images must have shape (C, H, W) or (B, C, H, W). "
+                f"Got {tuple(images.shape)}."
+            )
+        return images.to(device=self.device)
+
+    def _autocast_context(self):
+        return (
+            torch.autocast(device_type=self.device_type, dtype=torch.bfloat16)
+            if self.use_bfloat16 and self.device_type in {"cuda", "cpu"}
+            else nullcontext()
+        )
+
+    @torch.no_grad()
+    def set_images(self, images: torch.Tensor | Image.Image) -> None:
+        """
+        Set input images and precompute reusable ViT-Up cache data.
+
+        Args:
+            images: Full-size input image tensor in CHW/BCHW format, or a single
+                PIL image. Tensors are expected to already use the model's image
+                normalization. PIL images are converted and normalized without
+                resizing.
+        """
+        if self.vit_up is None:
+            raise RuntimeError("Model weights not loaded. Call load_weights first.")
+
+        images = self._prepare_images(images)
+        with self._autocast_context():
+            self._cache_data = self.vit_up.compute_cache_data(
+                pixel_values=images,
+                backbone=self.backbone,
+                hidden_layer_img_size=self.hidden_layer_img_size,
+            )
+        self._images = images
+
+    def get_cache_data(self) -> Optional[dict[str, Any]]:
+        """Return the cache data created by the most recent set_images call."""
+        return self._cache_data
+
+    def _clear_cache(self) -> None:
+        self._images = None
+        self._cache_data = None
+
     @torch.no_grad()
     def forward(
         self,
-        images: torch.Tensor,
-        query_coords: torch.Tensor,
-        hidden_layer_img_size: Optional[int] = None,
+        images: torch.Tensor | Image.Image | None = None,
+        query_coords: Optional[torch.Tensor] = None,
         query_chunk_size: Optional[int] = None,
         return_all_layers: bool = False,
     ) -> torch.Tensor | list:
@@ -335,10 +402,10 @@ class ViTUpWrapper(nn.Module):
         Extract ViTUp features for query coordinates.
 
         Args:
-            images: Input images, shape (B, C, H, W) where C=3
+            images: Optional input images. When provided, updates the internal
+                cache via set_images before running inference. If omitted, the
+                previously cached images from set_images are used.
             query_coords: Normalized query coordinates (0-1), shape (B, N_queries, 2)
-            hidden_layer_img_size: Optional image size for hidden backbone states.
-                Defaults to 448.
             query_chunk_size: Optional number of query points to process per chunk.
                 Defaults to the wrapper chunk size, or all queries if unset.
             return_all_layers: If True, return features from all layers.
@@ -350,44 +417,40 @@ class ViTUpWrapper(nn.Module):
         """
         if self.vit_up is None:
             raise RuntimeError("Model weights not loaded. Call load_weights first.")
+        if query_coords is None:
+            raise ValueError("query_coords must be provided.")
+        if images is not None:
+            self.set_images(images)
+        if self._cache_data is None:
+            raise RuntimeError("No image cache available. Call set_images(images) first.")
+        if query_coords.ndim != 3 or query_coords.shape[-1] != 2:
+            raise ValueError(
+                "query_coords must have shape (B, N_queries, 2). "
+                f"Got {tuple(query_coords.shape)}."
+            )
+        if self._images is not None and query_coords.shape[0] != self._images.shape[0]:
+            raise ValueError(
+                "query_coords batch size must match cached images batch size. "
+                f"Got {query_coords.shape[0]} query batches for "
+                f"{self._images.shape[0]} cached images."
+            )
 
-        hidden_layer_img_size = (
-            self.hidden_layer_img_size
-            if hidden_layer_img_size is None
-            else hidden_layer_img_size
-        )
         query_chunk_size = (
             self.query_chunk_size if query_chunk_size is None else query_chunk_size
         )
         if query_chunk_size is None:
             query_chunk_size = query_coords.shape[1]
 
-        # Cast to the model inference dtype.
-        images = images.to(device=self.device)
         query_coords = query_coords.to(device=self.device, dtype=self.dtype)
 
-        autocast_context = (
-            torch.autocast(device_type=self.device_type, dtype=torch.bfloat16)
-            if self.use_bfloat16 and self.device_type in {"cuda", "cpu"}
-            else nullcontext()
-        )
-
-        with autocast_context:
-            cache_data = self.vit_up.maybe_compute_cache_data(
-                pixel_values=images,
-                backbone=self.backbone,
-                hidden_layer_img_size=hidden_layer_img_size,
-            )
-
+        with self._autocast_context():
             q_chunks = []
             for q_start in range(0, query_coords.shape[1], query_chunk_size):
                 q_end = min(q_start + query_chunk_size, query_coords.shape[1])
                 q_layers_chunk = self.vit_up(
-                    pixel_values=images,
+                    pixel_values=None,
                     q_xy_normalized=query_coords[:, q_start:q_end, :],
-                    backbone=self.backbone,
-                    hidden_layer_img_size=hidden_layer_img_size,
-                    cache_data=cache_data,
+                    cache_data=self._cache_data,
                 )
                 if not return_all_layers:
                     q_layers_chunk = q_layers_chunk[-1]
@@ -406,7 +469,6 @@ class ViTUpWrapper(nn.Module):
     def set_config(
         self,
         use_bfloat16: Optional[bool] = None,
-        hidden_layer_img_size: Optional[int] = None,
         query_chunk_size: Optional[int] = None,
     ) -> None:
         """
@@ -414,7 +476,6 @@ class ViTUpWrapper(nn.Module):
 
         Args:
             use_bfloat16: Whether to use bf16 inference
-            hidden_layer_img_size: New hidden layer image size
             query_chunk_size: New query chunk size
         """
         if use_bfloat16 is not None:
@@ -422,9 +483,7 @@ class ViTUpWrapper(nn.Module):
             self.dtype = torch.bfloat16 if use_bfloat16 else torch.float32
             self.backbone = self.backbone.to(device=self.device, dtype=self.dtype)
             self.vit_up = self.vit_up.to(device=self.device, dtype=self.dtype)
-
-        if hidden_layer_img_size is not None:
-            self.hidden_layer_img_size = hidden_layer_img_size
+            self._clear_cache()
 
         if query_chunk_size is not None:
             self.query_chunk_size = query_chunk_size

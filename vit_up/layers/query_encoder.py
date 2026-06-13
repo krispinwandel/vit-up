@@ -44,11 +44,16 @@ class QueryEncoderBase(nn.Module):
 
     def maybe_compute_cache_data(
         self,
-        pixel_values: torch.Tensor,
+        pixel_values: Optional[torch.Tensor],
         backbone: Optional[nn.Module] = None,
         cache_data: Any = None,
     ) -> Any:
         if cache_data is None:
+            if pixel_values is None:
+                raise ValueError(
+                    "pixel_values must be provided if query_encoder_cache_data "
+                    "is not given."
+                )
             if backbone is None:
                 raise ValueError(
                     "backbone must be provided if query_encoder_cache_data is not given."
@@ -61,7 +66,7 @@ class QueryEncoderBase(nn.Module):
 
     def forward(
         self,
-        pixel_values: torch.Tensor,
+        pixel_values: Optional[torch.Tensor],
         q_xy_normalized: torch.Tensor,
         backbone: Optional[nn.Module] = None,
         cache_data: Any = None,
@@ -121,7 +126,7 @@ class QueryEncoder(QueryEncoderBase):
 
     def forward(
         self,
-        pixel_values: torch.Tensor,
+        pixel_values: Optional[torch.Tensor],
         q_xy_normalized: torch.Tensor,
         backbone: Optional[nn.Module] = None,
         query_encoder_cache_data: Any = None,
