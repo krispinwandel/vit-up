@@ -1,6 +1,19 @@
-# vit-up
+# ViT-Up: Faithful Feature Upsampling for Vision Transformers
 
-ViT-Up: Faithful Feature Upsampling for Vision Transformers
+ViT-Up upsamples dense Vision Transformer features at arbitrary query
+coordinates while preserving the semantic structure of the original backbone
+representations. It is designed for high-resolution dense prediction,
+correspondence, and probing workflows built on top of DINO-style ViTs.
+
+<p align="center">
+  <img src="assets/model_overview.jpg" alt="ViT-Up model overview" width="900">
+</p>
+
+<p align="center">
+  <a href="#inference">Inference</a> |
+  <a href="#training">Training</a> |
+  <a href="#evaluation">Evaluation</a>
+</p>
 
 Run all commands from the repository root.
 
@@ -10,6 +23,63 @@ Try ViT-Up in Google Colab:
 [inference_example_colab.ipynb](https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb)
 
 For local usage, see [notebooks/inference_example.ipynb](notebooks/inference_example.ipynb).
+
+### Torch Hub
+
+ViT-Up models can also be loaded directly with `torch.hub.load`. The Hub entry
+points download ViT-Up weights from Hugging Face and load the matching DINOv3
+backbone.
+
+```python
+import torch
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Available entry points:
+# - vit_up_dinov3_splus
+# - vit_up_dinov3_base
+model = torch.hub.load(
+    "krispinwandel/vit-up",
+    "vit_up_dinov3_splus",
+    pretrained=True,
+    trust_repo=True,
+    device=device,
+).eval()
+
+images = torch.randn(1, 3, 448, 448, device=device)
+query_coords = torch.rand(1, 100, 2, device=device)  # normalized (x, y) in [0, 1]
+
+with torch.no_grad():
+    features = model(images, query_coords)
+
+print(features.shape)  # (B, N_queries, D)
+```
+
+`pretrained=True` selects the published ViT-Up checkpoint. The Torch Hub entry
+points require pretrained weights, so `pretrained=False` is not supported.
+`trust_repo=True` tells PyTorch Hub that you trust this repository's `hubconf.py`;
+otherwise PyTorch may prompt the first time it loads the repo.
+
+The Hub wrappers accept the same inference options as `ViTUpWrapper`:
+
+```python
+model = torch.hub.load(
+    "krispinwandel/vit-up",
+    "vit_up_dinov3_splus",
+    pretrained=True,
+    trust_repo=True,
+    device="cpu",
+    use_bfloat16=False,
+    query_chunk_size=4096,
+)
+```
+
+Set `return_all_layers=True` during the forward pass to get a list of per-layer
+feature tensors instead of only the final feature tensor:
+
+```python
+all_layer_features = model(images, query_coords, return_all_layers=True)
+```
 
 ## Training
 
@@ -99,11 +169,4 @@ To only print model parameter counts:
 
 ```bash
 python vit_up/eval_kits/runtime_toolkit/run_runtime_bench.py model=dinov3/splus/vit_up print_model_params_only=true
-```
-
-## Monitoring
-
-```bash
-watch -n 1 nvidia-smi
-pkill -f main.py
 ```
