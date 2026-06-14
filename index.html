@@ -345,6 +345,23 @@
       color: var(--muted);
     }
 
+    .result-subsections {
+      display: grid;
+      gap: 34px;
+    }
+
+    .result-subsection {
+      display: grid;
+      gap: 14px;
+    }
+
+    .result-subsection h3 {
+      margin: 0;
+      font-size: clamp(22px, 2.5vw, 30px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
     .metric-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -777,7 +794,8 @@
       }
 
       .hero-figure,
-      #method .figure-panel {
+      #method .figure-panel,
+      #results .figure-panel {
         width: 100vw;
         margin-left: calc(50% - 50vw);
         padding: 0;
@@ -788,7 +806,8 @@
       }
 
       .hero-figure img,
-      #method .figure-panel img {
+      #method .figure-panel img,
+      #results .figure-panel img {
         width: 100%;
         margin: 0;
         padding: 11px;
@@ -797,7 +816,8 @@
       }
 
       .hero-figure .caption,
-      #method .figure-panel .caption {
+      #method .figure-panel .caption,
+      #results .figure-panel .caption {
         margin: 0;
         padding-right: 11px;
         padding-left: 11px;
@@ -910,7 +930,7 @@ query_features = model(pixel_values, query_coords)</code></pre>
         </div>
         <figure class="figure-panel">
           <img src="assets/architecture.jpg" alt="ViT-Up architecture diagram">
-          <figcaption class="caption">Training uses frozen multi-resolution ViT teacher features to supervise LoRA-adapted student features; query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
+          <figcaption class="caption">Training uses frozen multi-resolution ViT teacher features to supervise the student model; query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
         </figure>
       </div>
     </section>
@@ -966,64 +986,86 @@ query_features = model(pixel_values, query_coords)</code></pre>
           </article>
         </div>
 
-        <div class="table-wrap" aria-label="Probing results table">
-          <table>
-            <caption>Probing results on DINOv3-S+. Higher is better for mIoU, accuracy, and delta1; lower is better for RMSE.</caption>
-            <thead>
-              <tr>
-                <th rowspan="2">Method</th>
-                <th colspan="2">COCO Seg.</th>
-                <th colspan="2">VOC</th>
-                <th colspan="2">ADE20K</th>
-                <th colspan="2">Cityscapes</th>
-                <th colspan="2">COCO Depth</th>
-              </tr>
-              <tr>
-                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                <th>&delta;1 &uarr;</th><th>RMSE &darr;</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>Bilinear</td><td>63.10</td><td>81.85</td><td>84.88</td><td>96.45</td><td>43.27</td><td>76.17</td><td>61.36</td><td>93.44</td><td>61.52</td><td>62.80</td></tr>
-              <tr><td>JAFAR</td><td>62.50</td><td>81.50</td><td>83.88</td><td>96.16</td><td>42.48</td><td>75.81</td><td>57.78</td><td>92.47</td><td>60.64</td><td>64.92</td></tr>
-              <tr><td>AnyUp</td><td>63.03</td><td>81.83</td><td>84.54</td><td>96.34</td><td>42.77</td><td>76.02</td><td>58.96</td><td>92.93</td><td>61.66</td><td>62.62</td></tr>
-              <tr><td>UpLiFT</td><td>63.79</td><td>82.28</td><td>85.69</td><td class="second">96.72</td><td class="second">44.24</td><td class="second">76.71</td><td>63.08</td><td>93.94</td><td>61.84</td><td>61.79</td></tr>
-              <tr><td>NAF</td><td class="second">63.86</td><td class="second">82.33</td><td class="second">85.84</td><td class="second">96.72</td><td>44.17</td><td>76.69</td><td class="second">63.34</td><td class="second">94.13</td><td class="second">62.17</td><td class="second">61.15</td></tr>
-              <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">64.09</td><td class="best">82.49</td><td class="best">87.47</td><td class="best">97.14</td><td class="best">44.73</td><td class="best">77.06</td><td class="best">65.41</td><td class="best">94.73</td><td class="best">62.72</td><td class="best">59.82</td></tr>
-              <tr class="gain"><td>Gain vs. best baseline</td><td>+0.23</td><td>+0.16</td><td>+1.63</td><td>+0.42</td><td>+0.49</td><td>+0.35</td><td>+2.07</td><td>+0.60</td><td>+0.55</td><td>+1.33</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <div class="result-subsections">
+          <article class="result-subsection" id="qualitative-analysis">
+            <h3>Qualitative Analysis</h3>
+            <figure class="figure-panel">
+              <img src="assets/attn.jpg" alt="Qualitative comparison of feature upsampling methods on DINOv3-S+">
+              <figcaption class="caption">Qualitative comparison of feature upsampling methods on DINOv3-S+. All methods use a 448 x 448 input image; the native backbone produces a 28 x 28 feature grid, and upsampled feature maps are shown at 448 x 448 output resolution. We show two examples: a vegetable-store scene in the top two rows and a traffic scene in the bottom two rows. For each example, the top row visualizes the feature structure using PCA, including the input image, the original 28 x 28 backbone feature map, and the upsampled feature maps produced by ViT-Up, NAF, UpLiFT, AnyUp, and JAFAR. The bottom row shows the corresponding query-based similarity maps, including the input image with the query point encircled in blue, the similarity map obtained from the low-resolution backbone features, and the similarity maps obtained from the upsampled features of each method. ViT-Up produces coherent PCA structures and semantically selective similarity maps that remain aligned with the queried region. In contrast, NAF, AnyUp, and JAFAR can produce visually sharp but fragmented feature maps with leakage into nearby structures, while UpLiFT tends to produce smoother features and weaker similarity responses for small semantic regions.</figcaption>
+            </figure>
+          </article>
 
-        <div style="height: 18px"></div>
+          <article class="result-subsection" id="dense-probing">
+            <h3>Dense Probing</h3>
+            <figure class="figure-panel">
+              <img src="assets/probing.jpg" alt="Qualitative dense probing results on DINOv3-S+">
+              <figcaption class="caption">Qualitative dense probing results on DINOv3-S+. All methods use a 448 x 448 input image; the native backbone produces a 28 x 28 feature grid, and dense predictions are shown at 448 x 448 output resolution. Top two rows: semantic segmentation example with a person in front of a bus, showing PCA projections of the dense features and the corresponding predicted segmentation masks together with the ground-truth mask on the left. Bottom two rows: monocular depth example with a group of ducks, showing PCA projections of the dense features and the corresponding predicted depth maps together with the pseudo-depth target on the left generated by Depth Anything V2. For the bilinear baseline, we visualize PCA on the original 28 x 28 backbone feature grid. NAF, AnyUp, and JAFAR produce visually sharp but fragmented feature maps and noisy dense predictions. UpLiFT produces more localized but blurrier features, weakening fine structures such as the person's head region and small distant ducks. ViT-Up produces more coherent dense features, resulting in cleaner segmentation masks and more consistent depth estimates.</figcaption>
+            </figure>
+            <div class="table-wrap" aria-label="Probing results table">
+              <table>
+                <caption>Probing results on DINOv3-S+. Higher is better for mIoU, accuracy, and delta1; lower is better for RMSE.</caption>
+                <thead>
+                  <tr>
+                    <th rowspan="2">Method</th>
+                    <th colspan="2">COCO Seg.</th>
+                    <th colspan="2">VOC</th>
+                    <th colspan="2">ADE20K</th>
+                    <th colspan="2">Cityscapes</th>
+                    <th colspan="2">COCO Depth</th>
+                  </tr>
+                  <tr>
+                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
+                    <th>&delta;1 &uarr;</th><th>RMSE &darr;</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Bilinear</td><td>63.10</td><td>81.85</td><td>84.88</td><td>96.45</td><td>43.27</td><td>76.17</td><td>61.36</td><td>93.44</td><td>61.52</td><td>62.80</td></tr>
+                  <tr><td>JAFAR</td><td>62.50</td><td>81.50</td><td>83.88</td><td>96.16</td><td>42.48</td><td>75.81</td><td>57.78</td><td>92.47</td><td>60.64</td><td>64.92</td></tr>
+                  <tr><td>AnyUp</td><td>63.03</td><td>81.83</td><td>84.54</td><td>96.34</td><td>42.77</td><td>76.02</td><td>58.96</td><td>92.93</td><td>61.66</td><td>62.62</td></tr>
+                  <tr><td>UpLiFT</td><td>63.79</td><td>82.28</td><td>85.69</td><td class="second">96.72</td><td class="second">44.24</td><td class="second">76.71</td><td>63.08</td><td>93.94</td><td>61.84</td><td>61.79</td></tr>
+                  <tr><td>NAF</td><td class="second">63.86</td><td class="second">82.33</td><td class="second">85.84</td><td class="second">96.72</td><td>44.17</td><td>76.69</td><td class="second">63.34</td><td class="second">94.13</td><td class="second">62.17</td><td class="second">61.15</td></tr>
+                  <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">64.09</td><td class="best">82.49</td><td class="best">87.47</td><td class="best">97.14</td><td class="best">44.73</td><td class="best">77.06</td><td class="best">65.41</td><td class="best">94.73</td><td class="best">62.72</td><td class="best">59.82</td></tr>
+                  <tr class="gain"><td>Gain vs. best baseline</td><td>+0.23</td><td>+0.16</td><td>+1.63</td><td>+0.42</td><td>+0.49</td><td>+0.35</td><td>+2.07</td><td>+0.60</td><td>+0.55</td><td>+1.33</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
 
-        <div class="table-wrap compact-method" aria-label="Correspondence results table">
-          <table>
-            <caption>Correspondence results on DINOv3-S+. PCK is reported at different tolerance thresholds; higher is better for all metrics.</caption>
-            <thead>
-              <tr>
-                <th rowspan="2">Method</th>
-                <th colspan="3">SPair-71k</th>
-                <th colspan="3">NAVI</th>
-              </tr>
-              <tr>
-                <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
-                <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>Bilinear</td><td class="second">51.27</td><td>33.74</td><td class="second">3.83</td><td>80.16</td><td class="second">51.18</td><td class="second">33.58</td></tr>
-              <tr><td>JAFAR</td><td>36.82</td><td>18.59</td><td>1.89</td><td>79.04</td><td>47.02</td><td>26.60</td></tr>
-              <tr><td>AnyUp</td><td>37.63</td><td>19.31</td><td>1.97</td><td class="second">80.31</td><td>48.78</td><td>28.37</td></tr>
-              <tr><td>UpLiFT</td><td>46.87</td><td>29.15</td><td>3.43</td><td>79.35</td><td>49.05</td><td>30.49</td></tr>
-              <tr><td>NAF</td><td>48.68</td><td class="second">33.96</td><td>2.89</td><td>80.03</td><td>50.29</td><td>31.62</td></tr>
-              <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">55.44</td><td class="best">39.07</td><td class="best">7.30</td><td class="best">80.81</td><td class="best">51.59</td><td class="best">33.83</td></tr>
-              <tr class="gain"><td>Gain vs. best baseline</td><td>+4.17</td><td>+5.11</td><td>+3.47</td><td>+0.50</td><td>+0.41</td><td>+0.25</td></tr>
-            </tbody>
-          </table>
+          <article class="result-subsection" id="correspondence">
+            <h3>Correspondence</h3>
+            <figure class="figure-panel">
+              <img src="assets/matching.jpg" alt="Qualitative semantic correspondence results on SPair-71k">
+              <figcaption class="caption">Qualitative semantic correspondence results on SPair-71k. We show two image pairs, birds in the top two rows and horses in the bottom two rows. For each pair, the first row shows PCA projections of the dense features, and the second row shows correspondences obtained by matching each source query point to the target location with maximum cosine similarity. Green lines indicate correct matches under the SPair-71k threshold, while red lines indicate incorrect matches. ViT-Up produces fine-grained object features and accurate part-level correspondences. NAF and UpLiFT suffer from feature fragmentation or blurring in small structures such as the bird tail and the partially occluded horse tail, leading to incorrect matches.</figcaption>
+            </figure>
+            <div class="table-wrap compact-method" aria-label="Correspondence results table">
+              <table>
+                <caption>Correspondence results on DINOv3-S+. PCK is reported at different tolerance thresholds; higher is better for all metrics.</caption>
+                <thead>
+                  <tr>
+                    <th rowspan="2">Method</th>
+                    <th colspan="3">SPair-71k</th>
+                    <th colspan="3">NAVI</th>
+                  </tr>
+                  <tr>
+                    <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
+                    <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Bilinear</td><td class="second">51.27</td><td>33.74</td><td class="second">3.83</td><td>80.16</td><td class="second">51.18</td><td class="second">33.58</td></tr>
+                  <tr><td>JAFAR</td><td>36.82</td><td>18.59</td><td>1.89</td><td>79.04</td><td>47.02</td><td>26.60</td></tr>
+                  <tr><td>AnyUp</td><td>37.63</td><td>19.31</td><td>1.97</td><td class="second">80.31</td><td>48.78</td><td>28.37</td></tr>
+                  <tr><td>UpLiFT</td><td>46.87</td><td>29.15</td><td>3.43</td><td>79.35</td><td>49.05</td><td>30.49</td></tr>
+                  <tr><td>NAF</td><td>48.68</td><td class="second">33.96</td><td>2.89</td><td>80.03</td><td>50.29</td><td>31.62</td></tr>
+                  <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">55.44</td><td class="best">39.07</td><td class="best">7.30</td><td class="best">80.81</td><td class="best">51.59</td><td class="best">33.83</td></tr>
+                  <tr class="gain"><td>Gain vs. best baseline</td><td>+4.17</td><td>+5.11</td><td>+3.47</td><td>+0.50</td><td>+0.41</td><td>+0.25</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
         </div>
       </div>
     </section>
