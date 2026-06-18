@@ -1,9 +1,14 @@
 # ViT-Up: Faithful Feature Upsampling for Vision Transformers
 
-ViT-Up upsamples dense Vision Transformer features at arbitrary query
-coordinates while preserving the semantic structure of the original backbone
-representations. It is designed for high-resolution dense prediction,
-correspondence, and probing workflows built on top of DINO-style ViTs.
+<p align="center">
+  <a href="https://vitup.papers.discuna.com/">Project Page</a> |
+  <a href="https://arxiv.org/abs/2606.14024">arXiv</a> |
+  <a href="https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb">Google Colab</a> |
+  <a href="https://app.discuna.com/invite/krispinwandel">Discuna Forum</a> |
+  <a href="https://huggingface.co/Krispin/vit-up">Hugging Face</a>
+</p>
+
+ViT-Up is an implicit feature upsampler for Vision Transformers that predicts backbone-aligned features at arbitrary continuous image coordinates. Pretrained through self-supervised feature distillation on over one million ImageNet-1K images, it supports data-constrained dense prediction and fine-grained correspondence by letting downstream heads operate directly on dense DINOv3 features.
 
 <p align="center">
   <img src="assets/model_overview.jpg" alt="ViT-Up model overview" width="900">
@@ -15,14 +20,10 @@ correspondence, and probing workflows built on top of DINO-style ViTs.
   <a href="#evaluation">Evaluation</a>
 </p>
 
-Run all commands from the repository root.
-
 ## Inference
 
-Try ViT-Up in Google Colab:
-[inference_example_colab.ipynb](https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb)
-
-For local usage, see [notebooks/inference_example.ipynb](notebooks/inference_example.ipynb).
+Try ViT-Up in [Google Colab](https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb),
+or use the local example in [notebooks/inference_example.ipynb](notebooks/inference_example.ipynb).
 
 ### Torch Hub
 
@@ -82,6 +83,8 @@ all_layer_features = model(images, query_coords, return_all_layers=True)
 ```
 
 ## Training
+
+Run training and evaluation commands from the repository root.
 
 Train a ViT-Up model with PyTorch Lightning using one of the run configs:
 
@@ -169,4 +172,20 @@ To only print model parameter counts:
 
 ```bash
 python vit_up/eval_kits/runtime_toolkit/run_runtime_bench.py model=dinov3/splus/vit_up print_model_params_only=true
+```
+
+## Citation
+
+If ViT-Up is helpful for your work, please cite:
+
+```bibtex
+@misc{wandel2026vitupfaithfulfeatureupsampling,
+      title={ViT-Up: Faithful Feature Upsampling for Vision Transformers},
+      author={Krispin Wandel and Jingchuan Wang and Hesheng Wang},
+      year={2026},
+      eprint={2606.14024},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2606.14024},
+}
 ```
