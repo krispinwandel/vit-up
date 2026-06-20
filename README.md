@@ -18,6 +18,7 @@ ViT-Up is an implicit feature upsampler for Vision Transformers that predicts ba
   <a href="#inference">Inference</a> |
   <a href="#training">Training</a> |
   <a href="#evaluation">Evaluation</a> |
+  <a href="#video-encoding-experimental">Video Encoding</a> |
   <a href="#citation">Citation</a>
 </p>
 
@@ -174,6 +175,46 @@ To only print model parameter counts:
 ```bash
 python vit_up/eval_kits/runtime_toolkit/run_runtime_bench.py model=dinov3/splus/vit_up print_model_params_only=true
 ```
+
+## Video-Encoding (experimental)
+
+Use `scripts/encode_video.py` to extract dense ViT-Up features from a video, fit a global three-component PCA, and render the projected features as an RGB video. Frames are padded to square for ViT-Up inference, while query points and outputs retain the video's original aspect ratio.
+
+```bash
+python scripts/encode_video.py input.mp4 \
+    --width 640 \
+    --output-dir outputs
+```
+
+Specify `--width`, `--height`, or both. If only one dimension is supplied, the other is inferred from the input video's aspect ratio. If neither is supplied, the input resolution is used. PCA is fitted on the middle frame by default; use `--pca-nframes` to fit it on multiple evenly spaced frames:
+
+```bash
+python scripts/encode_video.py input.mp4 \
+    --width 640 \
+    --pca-nframes 10 \
+    --output-dir outputs
+```
+
+An optional segmentation video restricts ViT-Up queries and PCA processing to foreground points. Segmentation frames are converted to grayscale, resized to the output resolution with nearest-neighbor interpolation, and thresholded at `127` by default. Feature and PCA entries outside the mask are zero, and the corresponding RGB pixels are black.
+
+```bash
+python scripts/encode_video.py input.mp4 \
+    --seg-video segmentation.mp4 \
+    --seg-threshold 127 \
+    --width 640 \
+    --output-dir outputs
+```
+
+For an input named `input.mp4`, the output folder contains:
+
+- `input_features.npy`: dense ViT-Up features in `(T, H, W, D)` layout.
+- `input_features.json`: cache metadata used to validate feature reuse.
+- `input_pca_features.npy`: projected features in `(T, H, W, 3)` layout.
+- `input_pca.npz`: PCA parameters, normalization statistics, and metadata.
+- `input_pca_rgb.mp4`: RGB visualization at the requested resolution and input FPS.
+
+Compatible feature files are reused on subsequent runs, avoiding model loading and feature extraction. Changes to the input video, output resolution, model, precision, hidden-layer image size, segmentation video, or mask threshold invalidate the cache. The feature arrays can be large, so ensure the output folder has sufficient disk space. Run `python scripts/encode_video.py --help`
+for all inference and memory-related options.
 
 ## Citation
 
