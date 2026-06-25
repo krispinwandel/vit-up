@@ -216,6 +216,19 @@ For an input named `input.mp4`, the output folder contains:
 Compatible feature files are reused on subsequent runs, avoiding model loading and feature extraction. Changes to the input video, output resolution, model, precision, hidden-layer image size, segmentation video, or mask threshold invalidate the cache. The feature arrays can be large, so ensure the output folder has sufficient disk space. Run `python scripts/encode_video.py --help`
 for all inference and memory-related options.
 
+Read feature frames lazily with a memory map:
+
+```python
+from vit_up.utils import make_read_ft_frame
+
+read_ft_frame = make_read_ft_frame("outputs/input_features.npy")
+frame = read_ft_frame(0)
+frame.features  # (H, W, D), backed by the .npy file
+frame.mask      # (H, W) bool array when --seg-video was used, else None
+frame.rgb       # (H, W, 3) uint8 RGB input frame when metadata is available
+frame.pca_rgb   # (H, W, 3) uint8 PCA RGB frame when PCA artifacts are available
+```
+
 ## Citation
 
 If ViT-Up is helpful for your work, please cite:
