@@ -11,13 +11,14 @@
 ViT-Up is an implicit feature upsampler for Vision Transformers that predicts backbone-aligned features at arbitrary continuous image coordinates. Pretrained through self-supervised feature distillation on over one million ImageNet-1K images, it supports data-constrained dense prediction and fine-grained correspondence by letting downstream heads operate directly on dense DINOv3 features.
 
 <p align="center">
-  <img src="assets/model_overview.jpg" alt="ViT-Up model overview" width="900">
+  <img src="assets/readme/model_overview.jpg" alt="ViT-Up model overview" width="900">
 </p>
 
 <p align="center">
   <a href="#inference">Inference</a> |
   <a href="#training">Training</a> |
   <a href="#evaluation">Evaluation</a> |
+  <a href="#open-vocabulary-segmentation-experimental">Open-Vocabulary Segmentation</a> |
   <a href="#video-encoding-experimental">Video Encoding</a> |
   <a href="#citation">Citation</a>
 </p>
@@ -83,6 +84,22 @@ feature tensors instead of only the final feature tensor:
 ```python
 all_layer_features = model(images, query_coords, return_all_layers=True)
 ```
+
+## Open-Vocabulary Segmentation (experimental)
+
+The notebook [notebooks/talking_to_vit-up.ipynb](notebooks/talking_to_vit-up.ipynb) combines ViT-Up-B dense DINOv3 features with the Talk2DINO text projection model for prompt-based segmentation.
+
+Install the demo dependencies before running it:
+
+```bash
+uv sync --extra demo
+```
+
+<p align="center">
+  <img src="assets/readme/talking_to_vitup.png" alt="Open-vocabulary segmentation with Talk2DINO and ViT-Up" width="900">
+</p>
+
+This demo builds on the Talk2DINO paper, [Talking to DINO: Bridging Self-Supervised Vision Backbones with Language for Open-Vocabulary Segmentation](https://arxiv.org/abs/2411.19331).
 
 ## Training
 

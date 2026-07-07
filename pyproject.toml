@@ -67,6 +67,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+demo = [
+    "clip @ git+https://github.com/openai/CLIP.git",
+]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
