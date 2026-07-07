@@ -5,7 +5,11 @@
   <a href="https://arxiv.org/abs/2606.14024">arXiv</a> |
   <a href="https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb">Google Colab</a> |
   <a href="https://app.discuna.com/invite/krispinwandel">Discuna Forum</a> |
-  <a href="https://huggingface.co/papers/2606.14024">Hugging Face</a>
+  <a href="https://huggingface.co/papers/2606.14024">Hugging Face (paper)</a>
+</p>
+
+<p align="center">
+  <a href="https://huggingface.co/spaces/Krispin/vit-up"><b>Try Hugging Face Demo (no setup required!)</b></a>
 </p>
 
 ViT-Up is an implicit feature upsampler for Vision Transformers that predicts backbone-aligned features at arbitrary continuous image coordinates. Pretrained through self-supervised feature distillation on over one million ImageNet-1K images, it supports data-constrained dense prediction and fine-grained correspondence by letting downstream heads operate directly on dense DINOv3 features.
