@@ -89,22 +89,6 @@ feature tensors instead of only the final feature tensor:
 all_layer_features = model(images, query_coords, return_all_layers=True)
 ```
 
-## Open-Vocabulary Segmentation (experimental)
-
-The notebook [notebooks/talking_to_vit-up.ipynb](notebooks/talking_to_vit-up.ipynb) combines ViT-Up-B dense DINOv3 features with the Talk2DINO text projection model for prompt-based segmentation.
-
-Install the demo dependencies before running it:
-
-```bash
-uv sync --extra demo
-```
-
-<p align="center">
-  <img src="assets/readme/talking_to_vitup.png" alt="Open-vocabulary segmentation with Talk2DINO and ViT-Up" width="900">
-</p>
-
-This demo builds on the Talk2DINO paper, [Talking to DINO: Bridging Self-Supervised Vision Backbones with Language for Open-Vocabulary Segmentation](https://arxiv.org/abs/2411.19331).
-
 ## Training
 
 Run training and evaluation commands from the repository root.
@@ -196,6 +180,23 @@ To only print model parameter counts:
 ```bash
 python vit_up/eval_kits/runtime_toolkit/run_runtime_bench.py model=dinov3/splus/vit_up print_model_params_only=true
 ```
+
+
+## Open-Vocabulary Segmentation (experimental)
+
+The notebook [notebooks/talking_to_vit-up.ipynb](notebooks/talking_to_vit-up.ipynb) combines ViT-Up-B dense DINOv3 features with the Talk2DINO text projection model for prompt-based segmentation.
+
+Install the demo dependencies before running it:
+
+```bash
+uv sync --extra demo
+```
+
+<p align="center">
+  <img src="assets/readme/talking_to_vitup.png" alt="Open-vocabulary segmentation with Talk2DINO and ViT-Up" width="900">
+</p>
+
+This demo builds on the Talk2DINO paper, [Talking to DINO: Bridging Self-Supervised Vision Backbones with Language for Open-Vocabulary Segmentation](https://arxiv.org/abs/2411.19331).
 
 ## Video-Encoding (experimental)
 
