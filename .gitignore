@@ -9,3 +9,5 @@ __pycache__/
 .codex/
 .venv/
 vit_up/
+/data
+/outputs
