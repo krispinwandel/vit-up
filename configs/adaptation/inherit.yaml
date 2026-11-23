@@ -1,0 +1,3 @@
+# Reuse the initialization's adapters, merged into the frozen backbone.
+lora: inherit
+train_lora: false

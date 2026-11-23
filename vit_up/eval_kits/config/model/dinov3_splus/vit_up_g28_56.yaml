@@ -1,0 +1,7 @@
+defaults:
+  - /model/vit_up@_here_
+  - _self_
+
+name: vit_up_dinov3_splus_g28_56
+checkpoint: dinov3_splus_g28_56
+feature_dim: 384

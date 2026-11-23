@@ -1,53 +1,36 @@
-# @package _global_
-
+# Linear probing on frozen features, e.g.
+#   python -m vit_up.eval_kits.probing_toolkit.run_probing model=dinov3_splus/vit_up \
+#     schedule/mode=train schedule/dataset=voc dataset_evaluation=voc
+# Modes: train (train a head, then evaluate it) or eval (evaluate a pretrained head).
 defaults:
-  - schedule/mode: eval
+  - schedule/mode: train
   - schedule/dataset: voc
-  - workstation: local
-
   - dataset_evaluation: voc
-
-  - /model@model: dinov3/base/backbone
+  - /model@model: dinov3_splus/vit_up
   - backbone: base
   - optimizer: adamw
-  - logger: wandb
-  - loss: base
-
-  - dataset@train_dataset: train
-  - dataset@val_dataset: val
   - dataloader@train_dataloader: train
   - dataloader@val_dataloader: val
-
   - _self_
 
 mode: ${hydra:runtime.choices.schedule/mode}
 dataset: ${hydra:runtime.choices.schedule/dataset}
-
-# Select which probing pipeline to run.
-# - eval: frozen-head eval
-# - train: train probing head
-# - finetune: finetune probing head
-model_ckpt: null
 task: seg
+data_root: data
+output_dir: outputs/eval/probing
 
-# General parameters
-epochs: 1
-max_steps: 100_000
-
-bfloat16: True
-ratio: random
 seed: 42
-
-# Shared mode-level settings (migrated from mode_common.yaml)
-# These values are applied on every run via defaults ordering.
+sanity: false
+accumulate_grad_batches: 1
 num_epochs: ${schedule.num_epochs}
+# Train all epochs, save the head, then evaluate once; > 0 also evaluates every n epochs.
+eval_every_n_epochs: 0
 
 optimizer:
   lr: ${schedule.lr}
 
 train_dataloader:
   batch_size: 4
-
 val_dataloader:
   batch_size: 1
 
@@ -61,8 +44,8 @@ metrics:
     min_depth: 1e-3
     max_depth: 10
 
-sanity: false
-
 hydra:
   searchpath:
-    - file://${oc.env:PWD}/vit_up/eval_kits/config
+    - pkg://vit_up.eval_kits.config
+  run:
+    dir: ${output_dir}/${mode}/${task}/${dataset_evaluation.tag}/${hydra:runtime.choices.model}/${now:%Y-%m-%d_%H-%M-%S}

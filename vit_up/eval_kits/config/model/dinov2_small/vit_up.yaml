@@ -1,0 +1,7 @@
+defaults:
+  - /model/vit_up@_here_
+  - _self_
+
+name: vit_up_dinov2_small
+checkpoint: dinov2_small
+feature_dim: 384

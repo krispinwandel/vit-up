@@ -1,5 +1,12 @@
-# @package _global_
+# NAVI 3D correspondence recall, e.g.
+#   python -m vit_up.eval_kits.geometric_correspondence_toolkit.evaluate_navi_correspondence model=dinov3_splus/vit_up
+defaults:
+  - /model@model: dinov3_splus/vit_up
+  - dataset: navi
+  - _self_
 
+data_root: data
+output_dir: outputs/eval/navi
 random_seed: 8
 scale_factor: 0.25
 num_corr: 1000
@@ -7,18 +14,9 @@ batch_size: 4
 device: cuda
 input_size: 448
 output_size: 112
-visible_diamond_metric:
-  diamond_steps: [2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64]
-  visibility_depth_tolerance_m: 0.02
-defaults:
-  - /model@model: dinov3/base/backbone
-  - dataset: navi
-  - _self_
-
-mnt_dir: /media/user/ssd2t/nf_dino_mnt
 
 hydra:
   searchpath:
-    - file://${oc.env:PWD}/vit_up/eval_kits/config
+    - pkg://vit_up.eval_kits.config
   run:
-    dir: ${mnt_dir}/output/geometric_correspondence/navi/${hydra:runtime.choices.model}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ${output_dir}/${hydra:runtime.choices.model}/${now:%Y-%m-%d_%H-%M-%S}

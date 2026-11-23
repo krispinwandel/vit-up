@@ -1,92 +1,38 @@
 import torch
-from typing import List, Optional, Any
+import torch.nn.functional as F
 
-from vit_up.inference.vit_up_wrapper import ViTUpWrapper
-from vit_up.utils.grid_coords import build_regular_grid_centers_xy
-
-from .base import UpsamplerBase
+from vit_up.inference import ViTUpWrapper
+from .base import UpsamplerBase, as_size
 
 
 class ViTUpUpsampler(UpsamplerBase):
+    """ViT-Up queried at the cell centers of the output grid.
 
-    def __init__(
-        self,
-        model_name: str = "vit_up_dinov3_splus",
-        name: str = "vit_up",
-        out_size: Optional[int] = None,
-        amp_dtype=torch.bfloat16,
-        query_chunk_size=3136,
-        hidden_layer_img_size: int = 448,
-        device: Optional[str] = None,
-        ckpt_path: Optional[str] = None,
-        **kwargs,
-    ):
+    With `decode_size`, ViT-Up decodes a fixed decode_size x decode_size grid
+    which is then bilinearly resized to the output size.
+    """
+
+    def __init__(self, checkpoint: str = "dinov3_splus", name: str = "vit_up", image_size: int | None = None,
+                 query_chunk_size: int | None = 12544, decode_size: int | None = None, compile: bool = True,
+                 **kwargs):
         super().__init__(name=name)
-        if ckpt_path is not None:
-            raise ValueError(
-                "ViTUpUpsampler no longer loads Lightning checkpoints directly. "
-                "Pass model_name='vit_up_dinov3_base' or "
-                "model_name='vit_up_dinov3_splus' instead."
-            )
-
-        use_bfloat16 = amp_dtype == torch.bfloat16
-        self.vit_up = ViTUpWrapper(
-            model_name=model_name,
-            device=device or ("cuda" if torch.cuda.is_available() else "cpu"),
-            use_bfloat16=use_bfloat16,
-            hidden_layer_img_size=hidden_layer_img_size,
-            query_chunk_size=query_chunk_size,
-        ).eval()
-        self.amp_dtype = amp_dtype
-        self.out_size = out_size
-        self._q_xy_cache: dict[tuple[int, torch.device, torch.dtype], torch.Tensor] = {}
+        self.model = ViTUpWrapper(checkpoint, use_bfloat16=True, image_size=image_size,
+                                  query_chunk_size=query_chunk_size, compile=compile)
+        self.feature_dim = self.model.feature_dim
+        self.image_size = self.model.image_size
         self.query_chunk_size = query_chunk_size
-        self.hidden_layer_img_size = hidden_layer_img_size
+        self.decode_size = decode_size
 
-    def forward(
-        self,
-        pixel_values_bchw: torch.Tensor,
-        output_size: int | tuple[int, int],
-        input_size: Optional[int] = None,
-        layer_hidden_states_bhwc: Optional[List[torch.Tensor]] = None,
-        cache_data: Optional[Any] = None,
-        query_chunk_size=None,
-    ):
-        query_chunk_size = query_chunk_size or self.query_chunk_size
-        pixel_values_bchw = self._maybe_resize_pixel_values(
-            pixel_values_bchw, input_size
-        )
-        # NOTE currently the model only supports square output sizes, so we take the first element if a tuple is provided
-        output_size = self._normalize_img_size(output_size)[0]
-        output_size = (
-            min(self.out_size, output_size)
-            if self.out_size is not None
-            else output_size
-        )
-        q_device = pixel_values_bchw.device
-        q_dtype = (
-            self.amp_dtype
-            if pixel_values_bchw.is_cuda and self.amp_dtype is not None
-            else pixel_values_bchw.dtype
-        )
-        cache_key = (output_size, q_device, q_dtype)
-        q_xy_normalized = self._q_xy_cache.get(cache_key)
-        if (
-            q_xy_normalized is None
-            or q_xy_normalized.shape[0] != pixel_values_bchw.shape[0]
-        ):
-            q_xy_normalized = build_regular_grid_centers_xy(output_size).to(
-                device=q_device
-            )
-            q_xy_normalized = q_xy_normalized.reshape(1, output_size * output_size, 2)
-            q_xy_normalized = q_xy_normalized.expand(pixel_values_bchw.shape[0], -1, -1)
-            q_xy_normalized = q_xy_normalized.to(dtype=q_dtype)
-            self._q_xy_cache[cache_key] = q_xy_normalized
-        q_fts = self.vit_up(
-            images=pixel_values_bchw,
-            query_coords=q_xy_normalized,
-            query_chunk_size=query_chunk_size,
-        )
-        b, n_q, c = q_fts.shape
-        q_fts = q_fts.reshape(b, output_size, output_size, c)
-        return q_fts.float()
+    @torch.no_grad()
+    def get_class_token(self, images: torch.Tensor) -> torch.Tensor:
+        with self.model._autocast():
+            _, cls = self.model.backbone.hidden_states(self.resize(images, self.image_size), return_class_token=True)
+        return cls.float()
+
+    def forward(self, images, output_size, input_size=None):
+        size = as_size(output_size)
+        features = self.model.dense(self.resize(images, input_size), self.decode_size or size[0])
+        if features.shape[1:3] != size:
+            features = F.interpolate(features.permute(0, 3, 1, 2), size=size, mode="bilinear",
+                                     align_corners=False).permute(0, 2, 3, 1).contiguous()
+        return features

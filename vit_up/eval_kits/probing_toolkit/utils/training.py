@@ -1,35 +1,10 @@
-import os
-import random
 
-import numpy as np
 import torch
 import torchvision.transforms as T
 from hydra.utils import instantiate
-from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms.functional import InterpolationMode
 
 from vit_up.eval_kits.probing_toolkit.utils.img import PILToTensor
-
-
-def seed_worker():
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
-
-
-def logger(args, base_log_dir):
-    os.makedirs(base_log_dir, exist_ok=True)
-    existing_versions = [
-        int(d.split("_")[-1])
-        for d in os.listdir(base_log_dir)
-        if os.path.isdir(os.path.join(base_log_dir, d)) and d.startswith("version_")
-    ]
-    new_version = max(existing_versions, default=-1) + 1
-    new_log_dir = os.path.join(base_log_dir, f"version_{new_version}")
-
-    # Create the SummaryWriter with the new log directory
-    writer = SummaryWriter(log_dir=new_log_dir)
-    return writer, new_version, new_log_dir
 
 
 def get_dataloaders(

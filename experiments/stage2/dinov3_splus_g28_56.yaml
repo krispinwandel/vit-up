@@ -1,0 +1,21 @@
+# @package _global_
+# Stage 2 at 448 and 896 px, starting from experiments/stage1/dinov3_splus_g28_56.
+defaults:
+  - /train
+  - override /model: dinov3_splus
+  - override /objective: offset
+  - override /views: pad_half
+  - override /adaptation: inherit
+  - override /schedule: stage2
+  - _self_
+
+name: stage2_dinov3_splus_g28_56
+initialization: outputs/training/stage1_dinov3_splus_g28_56/checkpoints/best
+model:
+  image_size: 896
+  image_sizes: [448, 896]
+schedule:
+  batch_size: 8
+  accumulate_grad_batches: 2
+trainer:
+  val_check_interval: 1000

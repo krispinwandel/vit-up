@@ -1,0 +1,3 @@
+# Segmentation-only metadata; the selected upsampler loads its own backbone.
+_target_: vit_up.eval_kits.upsamplers.base.ImageNetNormalization
+name: ${oc.select:model.backbone,${oc.select:model.backbone_model_name,${model.name}}}

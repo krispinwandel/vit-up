@@ -1,5 +1,0 @@
-defaults:
-  - /model/base/uplift@_here_
-  - _self_
-
-dino_version: 2

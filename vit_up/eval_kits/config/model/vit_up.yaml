@@ -1,0 +1,9 @@
+# Any ViT-Up checkpoint: a release name or a training output, e.g.
+# model.checkpoint=outputs/training/stage2_dinov3_splus/checkpoints/best
+_target_: vit_up.eval_kits.upsamplers.ViTUpUpsampler
+name: vit_up
+checkpoint: ???
+feature_dim: ???
+image_size: null
+query_chunk_size: 12544
+decode_size: null

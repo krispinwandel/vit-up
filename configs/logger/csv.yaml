@@ -1,0 +1,3 @@
+_target_: lightning.pytorch.loggers.CSVLogger
+save_dir: ${output_dir}
+name: logs

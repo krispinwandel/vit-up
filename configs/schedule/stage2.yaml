@@ -1,0 +1,7 @@
+batch_size: 16
+accumulate_grad_batches: 1
+max_steps: 20000
+warmup_steps: 1000
+cosine_steps: 19000
+start_factor: 0.01
+eta_min: 1.0e-6

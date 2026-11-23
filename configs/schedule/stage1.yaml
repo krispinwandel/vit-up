@@ -1,0 +1,8 @@
+# Steps are optimizer steps; 53,381 steps at batch size 24 is one ImageNet epoch.
+batch_size: 24
+accumulate_grad_batches: 1
+max_steps: 53381
+warmup_steps: 2669
+cosine_steps: 50712
+start_factor: 0.01
+eta_min: 1.0e-6

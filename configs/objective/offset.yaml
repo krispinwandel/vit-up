@@ -1,0 +1,18 @@
+# Stage 2: self-distillation from the frozen Stage 1 model with learned query offsets.
+_target_: vit_up.training.objectives.OffsetDistillation
+num_queries: 3136
+anchor_weight: 0.1
+offset_weight: 1.0
+offset_regularization_weight: 10.0
+offset_head:
+  _target_: vit_up.training.objectives.OffsetHead
+  feature_dim: ${model.vit_up.dim}
+  hidden_dim: 256
+  max_offset: 0.15
+loss:
+  _target_: vit_up.training.losses.FeatureLoss
+  distances:
+    - _target_: vit_up.training.losses.L2Distance
+    - _target_: vit_up.training.losses.CosineDistance
+  layer_weights: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+  scale_weights: [1.0]

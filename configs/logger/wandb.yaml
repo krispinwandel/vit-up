@@ -1,0 +1,5 @@
+_target_: lightning.pytorch.loggers.WandbLogger
+project: vit_up
+name: ${name}
+save_dir: ${output_dir}
+group: ${model.name}

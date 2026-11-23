@@ -1,241 +1,94 @@
-"""
-ViT-Up: Vision Transformer Upsampling
-"""
-
-from typing import Any, Optional, Union
-
+"""ViT-Up: an implicit decoder that queries backbone-aligned features at continuous coordinates."""
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
+from torch import nn
 
-from ..layers import continuous_rope
-from ..layers.query_encoder import QueryEncoderBase
-from ..layers.backbones.dino_vit_base import DinoViTBackboneBase
-from vit_up.utils import grid_coords, spatial_tokens
+from .backbones import Backbone
+from .layers import MLP, ContinuousRoPE2D, CrossAttention, FiLM, FourierPositionalEncoding
+
+
+def closest_token_index(queries: torch.Tensor, height: int, width: int) -> torch.Tensor:
+    """Flat index of the backbone token whose cell contains each normalized (x, y) query."""
+    col = torch.round(queries[..., 0] * width - 0.5).long().clamp(0, width - 1)
+    row = torch.round(queries[..., 1] * height - 0.5).long().clamp(0, height - 1)
+    return row * width + col
+
+
+def relative_position(queries: torch.Tensor, index: torch.Tensor, height: int, width: int) -> torch.Tensor:
+    """Offset of each query from its closest token center, in token units."""
+    center_x = (torch.remainder(index, width).float() + 0.5) / width
+    center_y = (torch.div(index, width, rounding_mode="floor").float() + 0.5) / height
+    return torch.stack(((queries[..., 0] - center_x) / (1.0 / width),
+                        (queries[..., 1] - center_y) / (1.0 / height)), dim=-1)
 
 
 class ViTUpBlock(nn.Module):
-    """One ViTUp transition from one backbone layer feature space to the next."""
+    """Refine query features with one backbone layer: global attention plus local token modulation."""
 
-    def __init__(
-        self,
-        transition_mlp: Optional[nn.Module],
-        cross_attention: Optional[nn.Module],
-        featx: Optional[nn.Module],
-        mlp: nn.Module,
-        dim: int,
-        dim_kv: Optional[int] = None,
-        dim_h: Optional[int] = None,
-    ):
+    def __init__(self, dim: int, num_heads: int, rel_pos_dim: int):
         super().__init__()
-        self.transition_mlp = transition_mlp
-        self.cross_attention = cross_attention
-        self.featx = featx
-
+        self.transition_mlp = MLP([dim, 2 * dim, dim], input_layernorm=True, residual=True)
+        self.cross_attention = CrossAttention(dim, num_heads)
+        self.featx = FiLM(dim, rel_pos_dim)
         self.norm_q_global = nn.LayerNorm(dim)
-        if dim_h is not None and dim_kv is None:
-            dim_kv = dim_h
-        if dim_kv is None:
-            dim_kv = dim
-        self.norm_h_local = nn.LayerNorm(dim_kv)
-        self.norm_h_global = nn.LayerNorm(dim_kv)
+        self.norm_h_local = nn.LayerNorm(dim)
+        self.norm_h_global = nn.LayerNorm(dim)
         self.norm_post = nn.LayerNorm(dim)
-        self.mlp = mlp
+        self.fusion_mlp = MLP([dim, 4 * dim, dim])
 
-    @property
-    def global_cross_attention(self) -> Optional[nn.Module]:
-        return self.cross_attention
-
-    def forward(
-        self,
-        q_fts: torch.Tensor,
-        hidden_state_hwc: torch.Tensor,
-        closest_token: torch.Tensor,
-        rel_pos_enc: torch.Tensor,
-        q_position_embeddings: Optional[tuple[torch.Tensor, ...]] = None,
-    ) -> torch.Tensor:
-        if self.transition_mlp is not None:
-            q_fts = self.transition_mlp(q_fts)
-
-        if self.cross_attention is not None:
-            q_out_global = self.cross_attention(
-                query_feature=self.norm_q_global(q_fts),
-                hidden_states=self.norm_h_global(hidden_state_hwc.flatten(1, 2)),
-                position_embeddings=q_position_embeddings,
-            )
-            q_fts = q_out_global + q_fts
-
-        if self.featx is not None:
-            q_fts = q_fts + self.norm_h_local(
-                self.featx(closest_token, rel_pos_enc)
-            )
-
-        q_fts = q_fts + self.mlp(self.norm_post(q_fts))
-        return q_fts
+    def forward(self, q, tokens_hwc, closest_token, rel_pos_enc, rope):
+        q = self.transition_mlp(q)
+        q = q + self.cross_attention(self.norm_q_global(q), self.norm_h_global(tokens_hwc.flatten(1, 2)), rope)
+        q = q + self.norm_h_local(self.featx(closest_token, rel_pos_enc))
+        return q + self.fusion_mlp(self.norm_post(q))
 
 
 class ViTUp(nn.Module):
-    """ViTUp: local-global feature upsampling over selected backbone layers."""
+    """Predict the features of `layer_indices` backbone layers at arbitrary query coordinates.
 
-    def __init__(
-        self,
-        layer_indices: list[int],
-        query_embedding: QueryEncoderBase,
-        rel_pos_enc: nn.Module,
-        vit_up_blocks: nn.ModuleList,
-        decoder_mlp: Optional[Union[nn.ModuleList, nn.Module]] = None,
-        q_rope_embeddings: Optional[nn.Module] = None,
-    ):
+    Queries start from patch embeddings bilinearly sampled from a high-resolution
+    image (`query_image_size`). Each block then moves them to the next selected
+    backbone layer's feature space, and a per-layer decoder maps them to its output.
+    """
+
+    def __init__(self, dim: int, num_heads: int, layer_indices: list[int], query_image_size: int = 3584,
+                 num_bands: int = 16, max_resolution: float = 10.0, rope_base: float = 100.0):
         super().__init__()
-        self.layer_indices = [int(x) for x in layer_indices]
+        self.layer_indices = list(layer_indices)
+        self.query_image_size = query_image_size
+        self.rel_pos_enc = FourierPositionalEncoding(num_bands, max_resolution)
+        self.q_rope_embeddings = ContinuousRoPE2D(dim // num_heads, base=rope_base)
+        self.vit_up_blocks = nn.ModuleList(
+            ViTUpBlock(dim, num_heads, self.rel_pos_enc.out_dim) for _ in self.layer_indices[1:])
+        self.decoder_mlp = nn.ModuleList(MLP([dim, dim], input_layernorm=True) for _ in self.layer_indices)
 
-        self.query_embedding: QueryEncoderBase = query_embedding
-
-        self.rel_pos_enc = rel_pos_enc
-        self.vit_up_blocks = vit_up_blocks
-
-        self.q_rope_embeddings = q_rope_embeddings
-        self.decoder_mlp = decoder_mlp
-
-    @staticmethod
-    def _module_at(
-        modules: Union[nn.ModuleList, nn.Module],
-        index: int,
-    ) -> nn.Module:
-        if isinstance(modules, nn.ModuleList):
-            return modules[index]
-        return modules
-
-    def compute_cache_data(
-        self,
-        pixel_values: torch.Tensor,
-        backbone: DinoViTBackboneBase,
-        hidden_layer_img_size: Optional[int] = None,
-    ) -> dict:
-        layer_hidden_states_hwc = DinoViTBackboneBase._compute_lr_hidden_states(
-            backbone=backbone,
-            pixel_values=pixel_values,
-            layer_indices=self.layer_indices,
-            img_size=hidden_layer_img_size,
-            window_size=0,
-        )
-        query_embedding_cache_data = self.query_embedding.compute_cache_data(
-            pixel_values=pixel_values, backbone=backbone
-        )
+    def encode(self, pixel_values: torch.Tensor, backbone: Backbone, image_size: int | None = None) -> dict:
+        """Compute the per-image cache shared by all queries of that image."""
+        hidden_states = backbone.hidden_states(pixel_values, image_size)
+        query_image = F.interpolate(pixel_values, size=(self.query_image_size, self.query_image_size),
+                                    mode="bilinear", align_corners=False)
         return {
-            "layer_hidden_states_hwc": layer_hidden_states_hwc,
-            "query_embedding_cache_data": query_embedding_cache_data,
+            "hidden_states": [hidden_states[i] for i in self.layer_indices],
+            "patch_embeddings": backbone.embed_patches(query_image).permute(0, 3, 1, 2).contiguous(),
         }
 
-    def maybe_compute_cache_data(
-        self,
-        pixel_values: Optional[torch.Tensor],
-        backbone: Optional[DinoViTBackboneBase] = None,
-        hidden_layer_img_size: Optional[int] = None,
-        cache_data: Optional[dict] = None,
-    ):
-        if cache_data is not None:
-            return cache_data
-        if pixel_values is None:
-            raise ValueError(
-                "pixel_values must be provided if cache_data is not provided."
-            )
-        if backbone is None:
-            raise ValueError("backbone must be provided if cache_data is not provided.")
-        return self.compute_cache_data(
-            pixel_values=pixel_values,
-            backbone=backbone,
-            hidden_layer_img_size=hidden_layer_img_size,
-        )
+    def forward(self, queries: torch.Tensor, cache: dict) -> list[torch.Tensor]:
+        """Return features of every selected layer, each (B, N, C), for (B, N, 2) queries in [0, 1]."""
+        hidden_states = cache["hidden_states"]
+        patch_embeddings = cache["patch_embeddings"]
+        grid = (queries * 2.0 - 1.0).unsqueeze(2).to(patch_embeddings.dtype)
+        q = F.grid_sample(patch_embeddings, grid, mode="bilinear", padding_mode="border", align_corners=False)
+        q = q.squeeze(-1).transpose(1, 2)
 
-    def compute_query_embedding(
-        self,
-        pixel_values: Optional[torch.Tensor],
-        q_xy_normalized: torch.Tensor,
-        backbone: Optional[DinoViTBackboneBase] = None,
-        query_embedding_cache_data: Any = None,
-    ):
-        query_embedding_cache_data = self.query_embedding.maybe_compute_cache_data(
-            pixel_values=pixel_values,
-            backbone=backbone,
-            cache_data=query_embedding_cache_data,
-        )
-        q_fts, query_embedding_cache_data = self.query_embedding(
-            pixel_values=pixel_values,
-            q_xy_normalized=q_xy_normalized,
-            backbone=backbone,
-            query_encoder_cache_data=query_embedding_cache_data,
-        )
-        return q_fts, query_embedding_cache_data
+        height, width = hidden_states[0].shape[1:3]
+        index = closest_token_index(queries, height, width)
+        rel_pos_enc = self.rel_pos_enc(relative_position(queries, index, height, width))
+        rope = self.q_rope_embeddings(queries, height, width)
+        batch = torch.arange(len(queries), device=queries.device)[:, None]
 
-    def forward(
-        self,
-        pixel_values: Optional[torch.Tensor],
-        q_xy_normalized: torch.Tensor,
-        backbone: Optional[DinoViTBackboneBase] = None,
-        hidden_layer_img_size: Optional[int] = None,
-        cache_data: Any = None,
-    ):
-        cache_data = self.maybe_compute_cache_data(
-            pixel_values=pixel_values,
-            backbone=backbone,
-            hidden_layer_img_size=hidden_layer_img_size,
-            cache_data=cache_data,
-        )
-        layer_hidden_states_hwc = cache_data["layer_hidden_states_hwc"]
-
-        q_fts, _ = self.compute_query_embedding(
-            pixel_values=pixel_values,
-            q_xy_normalized=q_xy_normalized,
-            backbone=backbone,
-            query_embedding_cache_data=cache_data["query_embedding_cache_data"],
-        )
-
-        if self.decoder_mlp is not None:
-            q_fts_decoded = self._module_at(self.decoder_mlp, 0)(q_fts)
-        else:
-            q_fts_decoded = q_fts
-        layer_q_ft = [q_fts_decoded]
-
-        h_tokens, w_tokens = layer_hidden_states_hwc[0].shape[1:3]
-        _, closest_idx, _, _ = spatial_tokens.fetch_closest_token(
-            q_xy=q_xy_normalized,
-            hidden_state_hwc=layer_hidden_states_hwc[0],
-        )
-
-        rel_pos = grid_coords.compute_rel_position(
-            q_xy=q_xy_normalized,
-            closest_idx=closest_idx,
-            h_tokens=h_tokens,
-            w_tokens=w_tokens,
-        )
-        rel_pos_enc = self.rel_pos_enc(rel_pos)  # (b, n_q, fourier_dim)
-
-        q_position_embeddings = None
-        if self.q_rope_embeddings is not None:
-            q_position_embeddings = continuous_rope.build_q_position_embeddings(
-                h_tokens=h_tokens,
-                w_tokens=w_tokens,
-                q_xy_normalized=q_xy_normalized,
-                query_rope_embeddings=self.q_rope_embeddings,
-            )
-
-        for i, hidden_state_hwc in enumerate(layer_hidden_states_hwc[1:]):
-            vit_up_block = self._module_at(self.vit_up_blocks, i)
-            closest_token, closest_idx, _, _ = spatial_tokens.fetch_closest_token(
-                q_xy=q_xy_normalized,
-                hidden_state_hwc=hidden_state_hwc,
-            )
-            q_fts = vit_up_block(
-                q_fts=q_fts,
-                hidden_state_hwc=hidden_state_hwc,
-                closest_token=closest_token,
-                rel_pos_enc=rel_pos_enc,
-                q_position_embeddings=q_position_embeddings,
-            )
-            if self.decoder_mlp is not None:
-                q_fts_decoded = self._module_at(self.decoder_mlp, i + 1)(q_fts)
-            else:
-                q_fts_decoded = q_fts
-            layer_q_ft.append(q_fts_decoded)
-
-        return layer_q_ft
+        outputs = [self.decoder_mlp[0](q)]
+        for block, decoder, tokens in zip(self.vit_up_blocks, self.decoder_mlp[1:], hidden_states[1:]):
+            closest_token = tokens.flatten(1, 2)[batch, index]
+            q = block(q, tokens, closest_token, rel_pos_enc, rope)
+            outputs.append(decoder(q))
+        return outputs

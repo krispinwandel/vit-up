@@ -874,7 +874,6 @@ def main() -> None:
             _cleanup_staging(staging_dir / "cityscapes")
 
     if "voc" in selected:
-        voc_target = data_dir / "VOCdevkit" / "VOC2012"
         did_sync = False
         if data_dir != staging_dir and _voc_ready(data_dir):
             print("[skip] VOC already present in data_dir")

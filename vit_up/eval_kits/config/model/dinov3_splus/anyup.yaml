@@ -1,0 +1,4 @@
+_target_: vit_up.eval_kits.upsamplers.AnyUpUpsampler
+name: anyup_dinov3_splus
+backbone: facebook/dinov3-vits16plus-pretrain-lvd1689m
+feature_dim: 384

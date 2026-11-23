@@ -1,7 +1,5 @@
-import random
 from os.path import join
 
-import numpy as np
 import torch
 import torch.multiprocessing
 from PIL import Image

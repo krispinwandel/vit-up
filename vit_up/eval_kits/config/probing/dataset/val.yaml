@@ -1,5 +1,0 @@
-defaults:
-  - train  # Load default settings from train.yaml
-
-# Override specific parameters for validation
-root: ${dataroot}/val

@@ -1,0 +1,4 @@
+_target_: vit_up.eval_kits.upsamplers.AnyUpUpsampler
+name: anyup_dinov2_small
+backbone: facebook/dinov2-small
+feature_dim: 384

@@ -1,5 +1,6 @@
 # @package _global_
 
+# Evaluate the head trained on native-resolution DINOv3-S+ features (frozen-head evaluation).
 schedule:
   num_epochs: 1
   lr: 2e-3

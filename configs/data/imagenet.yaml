@@ -1,0 +1,7 @@
+_target_: vit_up.data.imagenet.ImageNetDataModule
+path: ILSVRC/imagenet-1k
+image_size: 896
+augmentation_strength: 1.0
+background_noise: true
+num_train_workers: 6
+num_val_workers: 3

@@ -1,0 +1,28 @@
+# Root training config. Experiments in experiments/ select and override these groups.
+defaults:
+  - model: dinov3_splus
+  - objective: grid
+  - views: pad
+  - adaptation: lora_r16
+  - schedule: stage1
+  - data: imagenet
+  - optimizer: adamw
+  - trainer: default
+  - callbacks: default
+  - logger: csv
+  - _self_
+
+name: ???
+seed: 0
+output_dir: outputs/training/${name}
+# Checkpoint (release name or directory) whose weights initialize the model.
+initialization: null
+# Lightning checkpoint to resume from.
+ckpt_path: null
+compile: true
+
+hydra:
+  run:
+    dir: ${output_dir}
+  job:
+    chdir: false

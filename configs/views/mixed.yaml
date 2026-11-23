@@ -1,0 +1,5 @@
+# Half of the samples use a half-size teacher crop of the full student image.
+pad_scale: [0.1, 0.5]
+crop_probability: 0.5
+crop_scale: 0.5
+crop_student_scale: [0.5, 1.0]

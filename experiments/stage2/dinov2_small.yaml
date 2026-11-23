@@ -1,0 +1,16 @@
+# @package _global_
+# Stage 2 from experiments/stage1/dinov2_small.
+defaults:
+  - /train
+  - override /model: dinov2_small
+  - override /objective: offset
+  - override /views: pad_half
+  - override /adaptation: inherit
+  - override /schedule: stage2
+  - _self_
+
+name: stage2_dinov2_small
+initialization: outputs/training/stage1_dinov2_small/checkpoints/best
+schedule:
+  batch_size: 8
+  accumulate_grad_batches: 2

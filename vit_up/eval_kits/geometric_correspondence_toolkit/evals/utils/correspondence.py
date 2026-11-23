@@ -1,30 +1,28 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Original code is licensed under CC BY-NC 4.0.
 # Code adapted by Mohamed El Banani
-import faiss
-import faiss.contrib.torch_utils
-import numpy as np
 import torch
 from torch.nn import functional as nn_F
 from torch.nn.functional import cosine_similarity
 
-from vit_up.eval_kits.geometric_correspondence_toolkit.evals.utils.transformations import (
-    transform_points_Rt,
-)
 
-res = faiss.StandardGpuResources()  # use a single GPU
-
-
-def faiss_knn(query, target, k):
-    # make sure query and target are contiguous
-    query = query.contiguous()
-    target = target.contiguous()
-
-    num_elements, feat_dim = query.shape
-    gpu_index = faiss.GpuIndexFlatL2(res, feat_dim)
-    gpu_index.add(target)
-    dist, index = gpu_index.search(query, k)
-    return dist, index
+@torch.no_grad()
+def exact_knn(query, target, k, chunk_size=1024):
+    """Exact squared-L2 k nearest neighbors with bounded distance-matrix memory."""
+    distances, indices = [], []
+    previous_precision = torch.get_float32_matmul_precision()
+    try:
+        torch.set_float32_matmul_precision("highest")
+        with torch.autocast(device_type=query.device.type, enabled=False):
+            target = target.float()
+            for chunk in query.float().split(chunk_size):
+                squared_l2 = torch.cdist(chunk, target).square()
+                dist, index = squared_l2.topk(k, dim=-1, largest=False, sorted=True)
+                distances.append(dist)
+                indices.append(index)
+    finally:
+        torch.set_float32_matmul_precision(previous_precision)
+    return torch.cat(distances), torch.cat(indices)
 
 
 def knn_points(X_f, Y_f, K=1, metric="euclidean"):
@@ -51,7 +49,7 @@ def knn_points(X_f, Y_f, K=1, metric="euclidean"):
         X_f = torch.nn.functional.normalize(X_f, dim=-1)
         Y_f = torch.nn.functional.normalize(Y_f, dim=-1)
 
-    _, X_nn = faiss_knn(X_f, Y_f, K)
+    _, X_nn = exact_knn(X_f, Y_f, K)
 
     # n_points x k x F
     X_f_nn = Y_f[X_nn]
@@ -148,92 +146,10 @@ def get_grid(H: int, W: int):
     return grid_xyz
 
 
-def grid_to_pointcloud(K_inv, depth, grid=None):
-    _, H, W = depth.shape
-
-    if grid is None:
-        grid = get_grid(H, W)
-
-    # Apply inverse projection
-    points = depth * grid
-
-    # Invert intriniscs
-    points = points.view(3, H * W)
-    points = K_inv @ points
-    points = points.permute(1, 0)
-
-    return points
-
-
-def sample_pointcloud_features(feats, K, pc, image_shape):
-    H, W = image_shape
-    uvd = pc @ K.transpose(-1, -2)
-    uv = uvd[:, :2] / uvd[:, 2:3].clamp(min=1e-9)
-
-    uv[:, 0] = (2 * uv[:, 0] / W) - 1
-    uv[:, 1] = (2 * uv[:, 1] / H) - 1
-
-    # sample points
-    pc_F = nn_F.grid_sample(feats[None], uv[None, None], align_corners=False)
-    pc_F = pc_F[:, :, 0].transpose(1, 2)[0]
-
-    return pc_F
-
-
-def argmax_2d(x, max_value=True):
-    h, w = x.shape[-2:]
-    x = torch.flatten(x, start_dim=-2)
-    if max_value:
-        flat_indices = x.argmax(dim=-1)
-    else:
-        flat_indices = x.argmin(dim=-1)
-
-    min_row = flat_indices // w
-    min_col = flat_indices % w
-    xy_indices = torch.stack((min_col, min_row), dim=-1)
-    return xy_indices
-
-
 def project_3dto2d(xyz, K_mat):
     uvd = xyz @ K_mat.transpose(-1, -2)
     uv = uvd[:, :2] / uvd[:, 2:3].clamp(min=1e-9)
     return uv
-
-
-def error_auc(errors, thresholds):
-    """
-    Args:
-        errors (list): [N,]
-        thresholds (list)
-    """
-    errors = [0] + sorted(list(errors))
-    recall = list(np.linspace(0, 1, len(errors)))
-
-    aucs = []
-    for thr in thresholds:
-        last_index = np.searchsorted(errors, thr)
-        y = recall[:last_index] + [recall[last_index - 1]]
-        x = errors[:last_index] + [thr]
-        aucs.append(np.trapz(y, x) / thr)
-
-    return aucs
-
-
-def estimate_correspondence_depth(feat_0, feat_1, depth_0, depth_1, K, num_corr=500):
-    xyz_0 = grid_to_pointcloud(K.inverse(), depth_0)
-    xyz_1 = grid_to_pointcloud(K.inverse(), depth_1)
-    xyz_0 = xyz_0[xyz_0[:, 2] > 0]
-    xyz_1 = xyz_1[xyz_1[:, 2] > 0]
-
-    feat_0 = sample_pointcloud_features(feat_0, K.clone(), xyz_0, depth_0.shape[-2:])
-    feat_1 = sample_pointcloud_features(feat_1, K.clone(), xyz_1, depth_1.shape[-2:])
-
-    idx0, idx1, corr_dist = get_correspondences_ratio_test(feat_0, feat_1, num_corr)
-
-    corr_xyz0 = xyz_0[idx0]
-    corr_xyz1 = xyz_1[idx1]
-
-    return corr_xyz0, corr_xyz1, corr_dist
 
 
 def estimate_correspondence_xyz(
@@ -265,134 +181,6 @@ def estimate_correspondence_xyz(
     c_uv1 = uvd_1[idx1][:, :2]
 
     return c_xyz0, c_xyz1, c_dist, c_uv0, c_uv1
-
-
-def _diamond_grid_indices(h: int, w: int, step: int, device: torch.device):
-    step = max(int(step), 1)
-    row_step = max(step // 2, 1)
-    rows = []
-    cols = []
-    for row_idx, y in enumerate(range(0, h, row_step)):
-        offset = (step // 2) if (row_idx % 2) else 0
-        xs = torch.arange(offset, w, step, device=device)
-        if xs.numel() == 0:
-            continue
-        rows.append(torch.full_like(xs, y))
-        cols.append(xs)
-
-    if not rows:
-        empty = torch.empty(0, dtype=torch.long, device=device)
-        return empty, empty
-    return torch.cat(rows), torch.cat(cols)
-
-
-def _select_visible_diamond_indices(valid_source_mask, num_corr, diamond_steps):
-    h, w = valid_source_mask.shape
-    candidates = []
-    for step in diamond_steps:
-        yy, xx = _diamond_grid_indices(h, w, int(step), valid_source_mask.device)
-        if yy.numel() == 0:
-            continue
-        keep = valid_source_mask[yy, xx]
-        yy = yy[keep]
-        xx = xx[keep]
-        count = int(yy.numel())
-        candidates.append((count, int(step), yy, xx))
-
-    enough = [candidate for candidate in candidates if candidate[0] >= num_corr]
-    if enough:
-        _, _, yy, xx = min(enough, key=lambda item: (item[0] - num_corr, item[1]))
-    elif candidates:
-        _, _, yy, xx = max(candidates, key=lambda item: item[0])
-    else:
-        empty = torch.empty(0, dtype=torch.long, device=valid_source_mask.device)
-        return empty, empty
-
-    if yy.numel() > num_corr:
-        keep = torch.linspace(0, yy.numel() - 1, num_corr, device=yy.device).long()
-        yy = yy[keep]
-        xx = xx[keep]
-    return yy, xx
-
-
-def estimate_correspondence_visible_diamond_xyz(
-    feat_0,
-    feat_1,
-    xyz_grid_0,
-    xyz_grid_1,
-    mask_0,
-    mask_1,
-    Rt_01,
-    intrinsics_1,
-    scale_factor: float,
-    num_corr=500,
-    diamond_steps=None,
-    visibility_depth_tolerance_m: float = 0.02,
-    ratio_test=True,
-):
-    if diamond_steps is None:
-        diamond_steps = list(range(2, 65))
-
-    _, h, w = xyz_grid_0.shape
-    feat_0 = nn_F.interpolate(feat_0[None], size=(h, w), mode="bicubic")[0]
-    feat_1 = nn_F.interpolate(feat_1[None], size=(h, w), mode="bicubic")[0]
-    mask_0 = nn_F.interpolate(mask_0[None].float(), size=(h, w), mode="nearest")[0, 0] > 0.5
-    mask_1 = nn_F.interpolate(mask_1[None].float(), size=(h, w), mode="nearest")[0, 0] > 0.5
-
-    depth_valid_0 = xyz_grid_0[2] > 0
-    depth_valid_1 = xyz_grid_1[2] > 0
-    source_mask = mask_0 & depth_valid_0
-    target_mask = mask_1 & depth_valid_1
-
-    xyz0_hw3 = xyz_grid_0.permute(1, 2, 0)
-    xyz0in1_hw3 = transform_points_Rt(xyz0_hw3.reshape(-1, 3), Rt_01).reshape(h, w, 3)
-    uv_full = project_3dto2d(xyz0in1_hw3.reshape(-1, 3), intrinsics_1).reshape(h, w, 2)
-    uv_scaled = uv_full * float(scale_factor)
-    target_x = uv_scaled[..., 0].round().long()
-    target_y = uv_scaled[..., 1].round().long()
-
-    in_front = xyz0in1_hw3[..., 2] > 0
-    in_bounds = (target_x >= 0) & (target_x < w) & (target_y >= 0) & (target_y < h)
-    safe_x = target_x.clamp(0, w - 1)
-    safe_y = target_y.clamp(0, h - 1)
-    target_depth = xyz_grid_1[2, safe_y, safe_x]
-    depth_close = (target_depth - xyz0in1_hw3[..., 2]).abs() <= visibility_depth_tolerance_m
-    target_visible = target_mask[safe_y, safe_x]
-    valid_source = source_mask & in_front & in_bounds & target_visible & depth_close
-
-    yy, xx = _select_visible_diamond_indices(valid_source, int(num_corr), diamond_steps)
-    if yy.numel() == 0:
-        empty_xyz = torch.empty(0, 3, device=feat_0.device, dtype=xyz_grid_0.dtype)
-        empty_uv = torch.empty(0, 2, device=feat_0.device, dtype=xyz_grid_0.dtype)
-        empty_dist = torch.empty(0, device=feat_0.device, dtype=feat_0.dtype)
-        return empty_xyz, empty_xyz, empty_dist, empty_uv, empty_uv
-
-    feat0_hwc = feat_0.permute(1, 2, 0)
-    feat1_hwc = feat_1.permute(1, 2, 0)
-    xyz1_hw3 = xyz_grid_1.permute(1, 2, 0)
-    uvd_0 = get_grid(h, w).to(xyz_grid_0).permute(1, 2, 0)
-    uvd_1 = get_grid(h, w).to(xyz_grid_1).permute(1, 2, 0)
-
-    feat_0_sel = feat0_hwc[yy, xx]
-    xyz_0_sel = xyz0_hw3[yy, xx]
-    uv_0_sel = uvd_0[yy, xx][:, :2]
-
-    feat_1_valid = feat1_hwc[target_mask]
-    xyz_1_valid = xyz1_hw3[target_mask]
-    uv_1_valid = uvd_1[target_mask][:, :2]
-    if feat_1_valid.shape[0] < 2:
-        empty_xyz = torch.empty(0, 3, device=feat_0.device, dtype=xyz_grid_0.dtype)
-        empty_uv = torch.empty(0, 2, device=feat_0.device, dtype=xyz_grid_0.dtype)
-        empty_dist = torch.empty(0, device=feat_0.device, dtype=feat_0.dtype)
-        return empty_xyz, empty_xyz, empty_dist, empty_uv, empty_uv
-
-    dists, idx1 = knn_points(feat_0_sel, feat_1_valid, K=2, metric="cosine")
-    idx1 = idx1[:, 0]
-    c_dist = calculate_ratio_test(dists) if ratio_test else dists[:, 0]
-
-    c_xyz1 = xyz_1_valid[idx1]
-    c_uv1 = uv_1_valid[idx1]
-    return xyz_0_sel, c_xyz1, c_dist, uv_0_sel, c_uv1
 
 
 def compute_binned_performance(y, x, x_bins):

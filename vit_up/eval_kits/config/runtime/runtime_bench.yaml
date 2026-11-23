@@ -1,32 +1,27 @@
-# @package _global_
-
+# Runtime from an image to dense features, e.g.
+#   python -m vit_up.eval_kits.runtime_toolkit.run_runtime_bench model=dinov3_splus/vit_up
+# Weights and inputs are FP32; `dtype` selects the autocast precision.
 defaults:
-  - /model@model: dinov3/base/backbone
+  - /model@model: dinov3_splus/vit_up
   - _self_
 
-# Where Hydra writes outputs (including this config and results).
-# mnt_dir: ${hydra:runtime.cwd}
-mnt_dir: /media/user/ssd2t/nf_dino_mnt
-
-# Runtime options
-
+output_dir: outputs/eval/runtime
 device: cuda
 batch_size: 1
 image_size: 448
 output_sizes: [56, 112, 224, 448]
-warmup_iters: 10
-bench_iters: 50
-
 dtype: bf16
-
-# When true, print param counts and exit without benchmarking.
-print_model_params_only: false
-
-save_results: true
-results_filename: runtime_bench.json
+seed: 0
+num_threads: 1
+# Each repeat warms up and then measures until both the iteration and time minimums are met.
+bench_repeats: 5
+warmup_iters: 100
+warmup_seconds: 3.0
+bench_iters: 100
+bench_seconds: 1.0
 
 hydra:
   searchpath:
-    - file://${oc.env:PWD}/vit_up/eval_kits/config
+    - pkg://vit_up.eval_kits.config
   run:
-    dir: ${mnt_dir}/output/runtime/${hydra:runtime.choices.model}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ${output_dir}/${hydra:runtime.choices.model}/${now:%Y-%m-%d_%H-%M-%S}

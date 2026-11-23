@@ -1,5 +1,0 @@
-defaults:
-  - /model/base/backbone@_here_
-  - _self_
-
-backbone_model_name: facebook/dinov2-small

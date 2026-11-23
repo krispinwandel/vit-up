@@ -1,0 +1,4 @@
+_target_: vit_up.eval_kits.upsamplers.JAFARUpsampler
+name: jafar_dinov3_splus
+backbone: vit_small_plus_patch16_dinov3.lvd1689m
+feature_dim: 384

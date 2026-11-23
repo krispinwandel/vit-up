@@ -21,7 +21,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from vit_up.inference.vit_up_wrapper import MODEL_SPECS, ViTUpWrapper
+from vit_up.checkpoint import RELEASES
+from vit_up.inference import ViTUpWrapper
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,9 +50,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--height", type=int, help="Output feature/video height.")
     parser.add_argument(
         "--model",
-        default="vit_up_dinov3_splus",
-        choices=sorted(MODEL_SPECS),
-        help="Pretrained ViT-Up variant.",
+        default="dinov3_splus",
+        help=f"Release name ({', '.join(RELEASES)}) or checkpoint directory.",
     )
     parser.add_argument(
         "--device", default="cuda" if torch.cuda.is_available() else "cpu"
@@ -66,7 +66,7 @@ def parse_args() -> argparse.Namespace:
         default=1,
         help="Number of evenly spaced video frames used to fit PCA (default: 1).",
     )
-    parser.add_argument("--hidden-layer-img-size", type=int, default=448)
+    parser.add_argument("--image-size", type=int, help="Backbone input resolution.")
     parser.add_argument(
         "--no-bfloat16", action="store_true", help="Use float32 model inference."
     )
@@ -305,7 +305,7 @@ def build_cache_metadata(
         "output_size": [output_height, output_width],
         "model": args.model,
         "use_bfloat16": not args.no_bfloat16,
-        "hidden_layer_img_size": args.hidden_layer_img_size,
+        "image_size": args.image_size,
     }
     if args.seg_video is None:
         metadata["segmentation"] = None
@@ -345,30 +345,16 @@ def load_cached_features(
         )
         return None
 
-    if metadata_path.is_file():
-        try:
-            cached_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            print(f"Ignoring feature cache with unreadable metadata: {exc}")
-            return None
-        cached_metadata.setdefault("segmentation", None)
-        if cached_metadata != expected_metadata:
-            print("Feature cache metadata does not match this run; regenerating.")
-            return None
-    else:
-        if expected_metadata.get("segmentation") is not None:
-            print(
-                "Feature cache predates segmentation metadata; regenerating masked "
-                "features."
-            )
-            return None
-        print(
-            "Reusing legacy feature cache based on matching shape and dtype; "
-            "future runs will also validate its metadata."
-        )
-        metadata_path.write_text(
-            json.dumps(expected_metadata, indent=2) + "\n", encoding="utf-8"
-        )
+    if not metadata_path.is_file():
+        return None
+    try:
+        cached_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"Ignoring feature cache with unreadable metadata: {exc}")
+        return None
+    if cached_metadata != expected_metadata:
+        print("Feature cache metadata does not match this run; regenerating.")
+        return None
 
     print(f"Reusing cached features: {features_path}")
     return features
@@ -436,10 +422,10 @@ def main() -> None:
 
     if features is None:
         model = ViTUpWrapper(
-            model_name=args.model,
+            args.model,
             device=args.device,
             use_bfloat16=not args.no_bfloat16,
-            hidden_layer_img_size=args.hidden_layer_img_size,
+            image_size=args.image_size,
             query_chunk_size=args.query_chunk_size,
         ).eval()
         query_coords = build_video_query_grid(

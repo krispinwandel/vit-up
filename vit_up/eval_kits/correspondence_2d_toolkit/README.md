@@ -1,25 +1,15 @@
-# Correspondence 2D Evaluation
-
-Hydra entrypoint for SPAIR-71k dense correspondence evaluation:
+# SPair-71k keypoint transfer
 
 ```bash
-python nf_dino/eval_kits/correspondence_2d_toolkit/run_correspondence_2d.py \
-  dataset_dir=/path/to/SPair-71k \
-  model=dinov3/vit_up_probe \
-  img_size=1024 \
-  out_size=1024
+python -m vit_up.eval_kits.correspondence_2d_toolkit.run_correspondence_2d model=dinov3_splus/vit_up
 ```
 
-The default config is:
+Each image is zero-padded to a square, resized to `img_size`, and mapped to an
+`out_size` x `out_size` feature grid. Every source keypoint takes the feature of
+its grid cell and is transferred to the cell center with the highest cosine
+similarity in the target image. A transfer is correct within `alpha` times the
+longer side of the target object's bounding box (PCK@0.1/0.05/0.01).
 
-```text
-nf_dino/eval_kits/config/correspondence_2d/correspondence_2d.yaml
-```
-
-The selected upsampler is instantiated directly from `cfg.model`. Evaluation writes
-`eval_config.json` and `pck_summary.json` into the Hydra run directory. The summary
-contains `pck@0.1`, `pck@0.05`, and `pck@0.01` per category and averaged over all
-categories.
-
-`report/table_utils.py` remains available for building tables from saved per-category
-metric JSON files.
+`pck_summary.json` in the Hydra run directory holds PCK per category and its mean
+over the 18 categories. Set `feature_cache_device=cpu` if a category's cached
+feature maps do not fit in GPU memory.

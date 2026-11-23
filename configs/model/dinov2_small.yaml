@@ -1,0 +1,10 @@
+name: dinov2_small
+backbone: facebook/dinov2-small
+patch_size: 14
+image_size: 448
+image_sizes: null
+vit_up:
+  _target_: vit_up.model.ViTUp
+  dim: 384
+  num_heads: 6
+  layer_indices: [0, 2, 4, 6, 8, 10, 12]

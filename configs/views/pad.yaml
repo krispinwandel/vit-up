@@ -1,0 +1,3 @@
+# Full-image teacher; the student sees the image at a random scale on a noise canvas.
+pad_scale: [0.1, 1.0]
+crop_probability: 0.0

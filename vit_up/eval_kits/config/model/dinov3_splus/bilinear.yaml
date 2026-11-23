@@ -1,0 +1,7 @@
+# Backbone features at img_in_size; out_size (if set) bilinearly resizes them.
+_target_: vit_up.eval_kits.upsamplers.BackboneProbe
+name: bilinear_dinov3_splus
+backbone_model_name: facebook/dinov3-vits16plus-pretrain-lvd1689m
+feature_dim: 384
+img_in_size: 448
+out_size: null

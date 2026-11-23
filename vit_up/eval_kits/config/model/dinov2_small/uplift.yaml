@@ -1,0 +1,5 @@
+_target_: vit_up.eval_kits.upsamplers.UpLiftUpsampler
+name: uplift_dinov2_small
+dino_version: 2
+feature_dim: 384
+iter_values: [1, 2, 3, 4]

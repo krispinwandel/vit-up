@@ -1,0 +1,10 @@
+- _target_: vit_up.training.callbacks.ExportCheckpoint
+  directory: ${output_dir}/checkpoints
+- _target_: lightning.pytorch.callbacks.ModelCheckpoint
+  dirpath: ${output_dir}/lightning
+  monitor: val/loss
+  mode: min
+  save_top_k: 3
+  save_last: true
+  auto_insert_metric_name: false
+  filename: step-{step}

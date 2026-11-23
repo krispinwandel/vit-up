@@ -1,0 +1,19 @@
+# @package _global_
+defaults:
+  - /train
+  - override /model: dinov2_small
+  - override /views: mixed
+  - override /adaptation: none
+  - _self_
+
+name: stage1_dinov2_small
+schedule:
+  batch_size: 16
+objective:
+  blocks_per_chunk: 49
+  loss:
+    distances:
+      - _target_: vit_up.training.losses.L2Distance
+      - _target_: vit_up.training.losses.CosineDistance
+      - _target_: vit_up.training.losses.KLDistance
+        tau: 0.5

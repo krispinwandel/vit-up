@@ -15,8 +15,7 @@ from PIL import Image
 from transformers import AutoConfig, AutoModel
 from transformers.models.auto.auto_factory import get_class_from_dynamic_module
 
-from vit_up.inference.vit_up_wrapper import ViTUpWrapper
-from vit_up.utils import pil_img_utils
+from vit_up.inference import ViTUpWrapper
 
 
 ThresholdMode = Literal["talk2dino_bg", "otsu", "percentile", "manual"]
@@ -61,18 +60,25 @@ def list_asset_images(assets_dir: Path) -> list[Path]:
     return image_paths
 
 
+def heatmap_to_rgb(heatmap: np.ndarray, colormap: str = "viridis", heat_min=None, heat_max=None) -> Image.Image:
+    heat_min = heatmap.min() if heat_min is None else heat_min
+    heat_max = heatmap.max() if heat_max is None else heat_max
+    colored = plt.get_cmap(colormap)((heatmap - heat_min) / (heat_max - heat_min))
+    return Image.fromarray((colored[:, :, :3] * 255).astype(np.uint8))
+
+
+def apply_mask_black(image: Image.Image, mask: np.ndarray) -> Image.Image:
+    pixels = np.array(image).copy()
+    pixels[~np.asarray(mask).astype(bool)] = 0
+    return Image.fromarray(pixels)
+
+
 def get_device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def load_vit_up_model(device: str) -> ViTUpWrapper:
-    return ViTUpWrapper(
-        "vit_up_dinov3_base",
-        device=device,
-        use_bfloat16=(device == "cuda"),
-        hidden_layer_img_size=448,
-        query_chunk_size=8192,
-    ).eval()
+    return ViTUpWrapper("dinov3_base", device=device, use_bfloat16=(device == "cuda"), query_chunk_size=8192).eval()
 
 
 def load_talk2dino_model(device: str, model_id: str = "lorebianchi98/Talk2DINOv3-ViTB"):
@@ -175,7 +181,7 @@ def resolve_threshold(
 
 
 def overlay_score(image: Image.Image, score_01: np.ndarray, alpha: float = 0.55) -> Image.Image:
-    heatmap = pil_img_utils.heatmap_to_rgb(score_01, colormap="magma", heat_min=0.0, heat_max=1.0)
+    heatmap = heatmap_to_rgb(score_01, colormap="magma", heat_min=0.0, heat_max=1.0)
     heatmap = heatmap.resize(image.size, resample=Image.Resampling.BILINEAR)
     return Image.blend(image.convert("RGB"), heatmap.convert("RGB"), alpha=alpha)
 
@@ -351,9 +357,9 @@ def render_result(
     resolved_threshold = resolve_threshold(score, threshold_mode, threshold, percentile)
     mask_lowres = score >= resolved_threshold
     mask = resize_mask(mask_lowres, image.size)
-    segmented = pil_img_utils.apply_mask_black(image, mask)
+    segmented = apply_mask_black(image, mask)
     mask_img = Image.fromarray((mask.astype(np.uint8) * 255), mode="L")
-    cosine_heatmap = pil_img_utils.heatmap_to_rgb(
+    cosine_heatmap = heatmap_to_rgb(
         result.cosine_display_01,
         colormap="magma",
         heat_min=0.0,

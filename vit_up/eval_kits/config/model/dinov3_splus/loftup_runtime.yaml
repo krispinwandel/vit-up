@@ -1,0 +1,7 @@
+# LoftUp's DINOv2-S checkpoint on DINOv3-S+ features: for runtime measurements only.
+_target_: vit_up.eval_kits.upsamplers.LoftUpUpsampler
+name: loftup_dinov3_splus_runtime
+backbone: facebook/dinov3-vits16plus-pretrain-lvd1689m
+feature_dim: 384
+runtime_only: true
+attention_need_weights: false

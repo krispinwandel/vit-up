@@ -1,0 +1,20 @@
+# @package _global_
+# Continue Stage 1 with the student at 448 and 896 px (28 and 56 backbone tokens per side).
+defaults:
+  - /train
+  - override /model: dinov3_splus
+  - override /adaptation: inherit
+  - override /schedule: stage2
+  - _self_
+
+name: stage1_dinov3_splus_g28_56
+initialization: dinov3_splus_stage1
+model:
+  image_sizes: [448, 896]
+adaptation:
+  train_lora: true
+schedule:
+  batch_size: 8
+  accumulate_grad_batches: 2
+trainer:
+  val_check_interval: 1000

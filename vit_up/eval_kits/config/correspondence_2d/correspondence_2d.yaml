@@ -1,19 +1,20 @@
-# @package _global_
-
+# SPair-71k PCK, e.g.
+#   python -m vit_up.eval_kits.correspondence_2d_toolkit.run_correspondence_2d model=dinov3_splus/vit_up
 defaults:
-  - /model@model: dinov3/base/backbone
-  - workstation: local
+  - /model@model: dinov3_splus/vit_up
   - _self_
 
-# dataset_dir: /media/user/ssd2t/datasets2/SPair-71k/
-# mnt_dir: ${hydra:runtime.cwd}
-# mnt_dir: /media/user/ssd2t/nf_dino_mnt
-cache_dir: ${mnt_dir}/data/spair71k
+dataset_dir: data/SPair-71k
+output_dir: outputs/eval/spair
 img_size: 448
 out_size: 448
+# Keep each category's normalized FP32 features on the inference device ("device") or on "cpu".
+feature_cache_device: device
+matching_query_chunk_size: 256
+matching_target_chunk_size: 16384
 
 hydra:
   searchpath:
-    - file://${oc.env:PWD}/vit_up/eval_kits/config
+    - pkg://vit_up.eval_kits.config
   run:
-    dir: ${mnt_dir}/output/correspondence_2d/${hydra:runtime.choices.model}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ${output_dir}/${hydra:runtime.choices.model}/${now:%Y-%m-%d_%H-%M-%S}

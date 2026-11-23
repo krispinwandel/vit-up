@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+  - /train
+  - override /model: dinov3_base
+  - override /objective: offset
+  - override /views: pad_half
+  - override /adaptation: inherit
+  - override /schedule: stage2
+  - _self_
+
+name: stage2_dinov3_base
+initialization: dinov3_base_stage1
+schedule:
+  batch_size: 8
+  accumulate_grad_batches: 2

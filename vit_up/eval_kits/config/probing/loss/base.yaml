@@ -1,3 +1,0 @@
-_target_: vit_up.eval_kits.probing_toolkit.loss.Loss
-loss_type: cosine_mse
-dim: ${model.feature_dim}

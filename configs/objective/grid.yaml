@@ -1,0 +1,13 @@
+# Stage 1: distill the frozen backbone at 14, 28 and 56 tokens per side.
+_target_: vit_up.training.objectives.GridDistillation
+patch_size: ${model.patch_size}
+grid_size: 14
+n_scales: 3
+blocks_per_chunk: 196
+loss:
+  _target_: vit_up.training.losses.FeatureLoss
+  distances:
+    - _target_: vit_up.training.losses.L2Distance
+    - _target_: vit_up.training.losses.CosineDistance
+  layer_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  scale_weights: [1.0, 1.0, 1.0]

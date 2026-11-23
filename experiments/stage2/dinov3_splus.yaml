@@ -1,0 +1,12 @@
+# @package _global_
+defaults:
+  - /train
+  - override /model: dinov3_splus
+  - override /objective: offset
+  - override /views: pad_half
+  - override /adaptation: inherit
+  - override /schedule: stage2
+  - _self_
+
+name: stage2_dinov3_splus
+initialization: dinov3_splus_stage1

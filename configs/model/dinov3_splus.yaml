@@ -1,0 +1,10 @@
+name: dinov3_splus
+backbone: facebook/dinov3-vits16plus-pretrain-lvd1689m
+patch_size: 16
+image_size: 448
+image_sizes: null
+vit_up:
+  _target_: vit_up.model.ViTUp
+  dim: 384
+  num_heads: 6
+  layer_indices: [0, 2, 4, 6, 8, 10, 12]

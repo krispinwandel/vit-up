@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import datetime
-import os
+from math import ceil
 import random
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
 import torch
@@ -104,10 +105,13 @@ class UpsamplerEvaluator:
             raise FileNotFoundError(f"Checkpoint file not found: {checkpoint_path}")
 
     def set_optimizer(self, cfg, loader):
+        accumulation = cfg.get('accumulate_grad_batches', 1)
+        if isinstance(accumulation, bool) or not isinstance(accumulation, int) or accumulation < 1:
+            raise ValueError('accumulate_grad_batches must be a positive integer.')
         params_classifier = self.classifier.parameters()
         optimizer = instantiate(cfg.optimizer, params=list(params_classifier))
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=cfg.num_epochs * len(loader)
+            optimizer, T_max=cfg.num_epochs * ceil(len(loader) / accumulation)
         )
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -124,42 +128,42 @@ class UpsamplerEvaluator:
         if hasattr(self.console, "file") and self.console.file:
             self.console.file.flush()
 
-    def log_tensorboard(self, step, loss=None, metrics=None, lr=None):
+    def log_tensorboard(self, step, loss=None, metrics=None, lr=None, iters_per_second=None):
         """Log losses and metrics to TensorBoard."""
         if loss is not None:
             self.writer.add_scalar("Loss/Step", loss, step)
         if lr is not None:
             self.writer.add_scalar("LR", lr, step)
+        if iters_per_second is not None:
+            self.writer.add_scalar("train/iters_per_second", iters_per_second, step)
         if metrics is not None:
             for metric_name, metric_value in metrics.items():
                 self.writer.add_scalar(f"Metrics/{metric_name}", metric_value, step)
-        if hasattr(self, "wandb") and self.wandb is not None:
-            to_log = {}
-            if loss is not None:
-                to_log["Loss/Step"] = loss
-            if lr is not None:
-                to_log["LR"] = lr
-            if metrics is not None:
-                for metric_name, metric_value in metrics.items():
-                    to_log[f"Metrics/{metric_name}"] = metric_value
-            if to_log:
-                try:
-                    self.wandb.log(to_log, step=step)
-                except Exception:
-                    pass
 
     def process_batch(self, image_batch, target, is_training=True):
         H, W = target.shape[-2:]
+        model_images = image_batch
+        if self.cfg.task == 'depth':
+            # Keep RGB [0,1] for the depth teacher, normalize the evaluated backbone.
+            mean = image_batch.new_tensor(self.mean)[None, :, None, None]
+            std = image_batch.new_tensor(self.std)[None, :, None, None]
+            model_images = (image_batch - mean) / std
         with torch.no_grad():
-            pred_bhwc = self.model(image_batch, (H, W))
+            pred_bhwc = self.model(model_images, (H, W))
             pred = pred_bhwc.permute(0, 3, 1, 2).contiguous()
 
             cls_token = None
             if self.cfg.task == "depth":
-                cls_token = self.backbone(image_batch)[1]
+                model = unwrap_parallel(self.model)
+                if hasattr(model, 'get_class_token'):
+                    cls_token = model.get_class_token(model_images)
+                else:
+                    cls_token = self.backbone(model_images)[1]
 
         if self.cfg.task == "depth":
-            cls_token = F.normalize(cls_token, dim=2)[:, 0, :]
+            if cls_token.ndim == 3:
+                cls_token = cls_token[:, 0, :]
+            cls_token = F.normalize(cls_token, dim=-1)
             cls_token = cls_token[:, :, None, None]
             pred = torch.cat([pred, cls_token.expand_as(pred)], dim=1)
 
@@ -197,7 +201,7 @@ class UpsamplerEvaluator:
             ).astype(np.uint8)
             inputs = self.image_processor(
                 images=depth_image_batch, return_tensors="pt"
-            ).to("cuda")
+            ).to(self.device)
             with torch.no_grad():
                 pseudo_depth = self.depth_model(**inputs)["predicted_depth"]
 
@@ -212,7 +216,7 @@ class UpsamplerEvaluator:
                 self.cfg.metrics.depth.min_depth,
                 self.cfg.metrics.depth.max_depth,
                 256,
-                device="cuda",
+                device=pred.device,
             )
             pred = F.relu(pred)
             eps = 0.1
@@ -230,14 +234,13 @@ class UpsamplerEvaluator:
         self.classifier.train()
 
         self.steps_per_epoch = len(train_dataloader)
-
         epoch_task = progress.add_task(
-            f"Epoch {epoch+1}/{self.cfg.num_epochs}",
-            total=len(train_dataloader),
-            loss=0.0,
-            step=0,
-        )
+            f"Epoch {epoch+1}/{self.cfg.num_epochs}", total=len(train_dataloader), loss=0.0, step=0)
         total_loss = 0
+        avg_loss = 0
+        interval_start = perf_counter()
+        last_logged_batch = 0
+        accumulation = self.cfg.get('accumulate_grad_batches', 1)
 
         for batch_idx, batch in enumerate(tqdm(train_dataloader)):
             batch = get_batch(batch, self.device)
@@ -248,7 +251,8 @@ class UpsamplerEvaluator:
                 image_batch = torch.flip(image_batch, dims=[3])
                 target = torch.flip(target, dims=[2])
 
-            self.optimizer.zero_grad()
+            if batch_idx % accumulation == 0:
+                self.optimizer.zero_grad()
 
             pred, target = self.process_batch(image_batch, target, is_training=True)
 
@@ -257,48 +261,35 @@ class UpsamplerEvaluator:
             elif self.cfg.task == "depth":
                 loss = self.sigloss(pred, target) + self.gradientloss(pred, target)
 
-            loss.backward()
-            self.optimizer.step()
+            # The last accumulation group may be shorter.
+            group_start = (batch_idx // accumulation) * accumulation
+            group_size = 1 if self.cfg.sanity else min(accumulation, len(train_dataloader) - group_start)
+            (loss / group_size).backward()
+            update = self.cfg.sanity or (batch_idx + 1) % accumulation == 0 or batch_idx + 1 == len(train_dataloader)
+            if update:
+                self.optimizer.step()
             total_loss += loss.item()
-
             avg_loss = total_loss / (batch_idx + 1)
 
-            if (batch_idx + 1) % LOG_INTERVAL == 0 or batch_idx == len(
-                train_dataloader
-            ) - 1:
-                elapsed_time = datetime.datetime.now() - start_time
-                elapsed_str = str(elapsed_time).split(".")[0]
+            if (batch_idx + 1) % LOG_INTERVAL == 0 or batch_idx in (0, len(train_dataloader) - 1) or self.cfg.sanity:
+                now = perf_counter()
+                interval_batches = batch_idx + 1 - last_logged_batch
+                iters_per_second = interval_batches / (now - interval_start)
+                interval_start, last_logged_batch = now, batch_idx + 1
+                elapsed_str = str(datetime.datetime.now() - start_time).split(".")[0]
                 current_lr = self.optimizer.param_groups[0]["lr"]
-
-                progress.update(
-                    epoch_task,
-                    advance=LOG_INTERVAL,
-                    loss=avg_loss,
-                    step=batch_idx + 1,
-                )
-
+                progress.update(epoch_task, advance=interval_batches, loss=avg_loss, step=batch_idx + 1)
                 self.log_print(
-                    f"[cyan]Iteration {batch_idx + 1}[/cyan] - "
-                    f"Loss: {avg_loss:.6f} - "
-                    f"LR: {current_lr:.5e} - "
-                    f"Elapsed Time: {elapsed_str}"
-                )
-
-                if self.console and hasattr(self.console, "file"):
-                    self.console.file.flush()
-
+                    f"[cyan]Iteration {batch_idx + 1}[/cyan] - Loss: {avg_loss:.6f} - LR: {current_lr:.5e} - "
+                    f"Iters/s: {iters_per_second:.2f} - Elapsed Time: {elapsed_str}")
                 progress.refresh()
-
                 global_step = epoch * len(train_dataloader) + batch_idx
-                self.log_tensorboard(global_step, loss=avg_loss, lr=current_lr)
-
-            if self.cfg.sanity and batch_idx == 0:
-                break
-
-            self.scheduler.step()
+                self.log_tensorboard(global_step, loss=avg_loss, lr=current_lr, iters_per_second=iters_per_second)
 
             if self.cfg.sanity:
                 break
+            if update:
+                self.scheduler.step()
 
         current_lr = self.optimizer.param_groups[0]["lr"]
         self.log_print(

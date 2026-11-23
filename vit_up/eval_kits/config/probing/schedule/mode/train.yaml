@@ -2,3 +2,5 @@
 
 schedule:
   lr: 2e-3
+# Optional checkpoint to initialize the head from.
+head_ckpt: null

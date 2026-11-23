@@ -1,0 +1,7 @@
+# @package _global_
+defaults:
+  - /train
+  - override /model: dinov3_splus
+  - _self_
+
+name: stage1_dinov3_splus

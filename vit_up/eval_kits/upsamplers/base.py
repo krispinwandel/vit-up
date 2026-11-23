@@ -1,58 +1,45 @@
-from typing import List, Optional, Any
-import torch.nn as nn
 import torch
+import torch.nn.functional as F
 import torchvision.transforms as T
-from abc import abstractmethod
+from torch import nn
+
+
+class ImageNetNormalization(nn.Module):
+    """Normalization metadata for probes whose upsampler owns the backbone."""
+
+    def __init__(self, name: str = "imagenet"):
+        super().__init__()
+        self.name = name
+        self.config = {"mean": (0.485, 0.456, 0.406), "std": (0.229, 0.224, 0.225)}
+
+
+def as_size(size: int | tuple[int, int]) -> tuple[int, int]:
+    return (size, size) if isinstance(size, int) else (int(size[0]), int(size[1]))
 
 
 class UpsamplerBase(nn.Module):
+    """Map ImageNet-normalized (B, 3, H, W) images to dense (B, h, w, C) features."""
+
     def __init__(self, name: str):
         super().__init__()
         self.name = name
 
-    def _normalize_img_size(self, img_size: int | tuple[int, int]) -> tuple[int, int]:
-        if isinstance(img_size, int):
-            return img_size, img_size
-        if len(img_size) != 2:
-            raise ValueError("output_size must be an int or a tuple of length 2.")
-        return int(img_size[0]), int(img_size[1])
+    @staticmethod
+    def resize(images: torch.Tensor, size: int | tuple[int, int] | None) -> torch.Tensor:
+        return images if size is None else T.Resize(size=as_size(size))(images)
 
-    def _maybe_resize_pixel_values(
-        self,
-        pixel_values_bchw: torch.Tensor,
-        input_size: Optional[tuple[int, int] | int] = None,
-    ) -> torch.Tensor:
-        if input_size is None:
-            return pixel_values_bchw
-        return T.Resize(
-            size=self._normalize_img_size(input_size),
-        )(pixel_values_bchw)
+    @staticmethod
+    def backbone_features(backbone: nn.Module, images: torch.Tensor) -> torch.Tensor:
+        """Last-layer features of a `vit_up.model` backbone, (B, C, h, w)."""
+        return backbone.hidden_states(images)[-1].permute(0, 3, 1, 2).contiguous()
 
-    @abstractmethod
-    def forward(
-        self,
-        pixel_values_bchw: torch.Tensor,
-        output_size: int,
-        input_size: Optional[int] = None,
-        layer_hidden_states_bhwc: Optional[List[torch.Tensor]] = None,
-        cache_data: Optional[Any] = None,
-    ) -> torch.Tensor:
-        """
-        Returns:
-            last_hidden_states_bchw of shape (b,h,w,c)
-        """
-        raise NotImplementedError(
-            "UpsamplerBase is an abstract class. Implement forward method in subclass."
-        )
+    @staticmethod
+    def to_bhwc(features: torch.Tensor, size: tuple[int, int] | None = None) -> torch.Tensor:
+        """(B, C, h, w) -> (B, H, W, C), bilinearly resized to `size` if it differs."""
+        if size is not None and tuple(features.shape[-2:]) != size:
+            features = F.interpolate(features, size=size, mode="bilinear", align_corners=False)
+        return features.permute(0, 2, 3, 1).contiguous()
 
-    @abstractmethod
-    def pre_compute_cache(
-        self,
-        pixel_values_bchw: torch.Tensor,
-        output_size: int,
-        input_size: Optional[int] = None,
-        layer_hidden_states_bhwc: Optional[List[torch.Tensor]] = None,
-    ):
-        # Optional method to pre-compute any cache data needed for forward pass.
-        # By default, does nothing and returns None.
-        return None
+    def forward(self, images: torch.Tensor, output_size: int | tuple[int, int],
+                input_size: int | None = None) -> torch.Tensor:
+        raise NotImplementedError
