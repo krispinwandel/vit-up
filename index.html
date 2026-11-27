@@ -302,12 +302,13 @@
     .f { color: #7dd3fc; }
     .c { color: #6b7385; font-style: italic; }
 
+    .stats-title { margin: clamp(48px, 7vw, 80px) 0 16px; }
     .stats {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
-      margin-top: clamp(48px, 7vw, 80px);
     }
+    .stats-note { margin: 12px 0 0; font-size: 13px; color: var(--faint); }
     .stat {
       position: relative;
       padding: 22px 22px 20px;
@@ -325,7 +326,7 @@
     }
     .stat .value { font-size: 38px; font-weight: 750; letter-spacing: -0.03em; line-height: 1; }
     .stat .delta { margin-left: 8px; font-size: 15px; font-weight: 650; color: var(--up); letter-spacing: 0; }
-    .stat .what { margin-top: 10px; font-size: 14px; font-weight: 600; }
+    .stat .what { margin-top: 12px; font-size: 14px; font-weight: 650; }
     .stat .ctx { margin-top: 2px; font-size: 13px; color: var(--faint); }
 
     /* figures */
@@ -546,10 +547,10 @@
         <div class="overview">
           <div>
             <h2>Overview</h2>
-            <p style="margin-top: 22px;">Vision Transformers provide strong, broadly reusable features, but the quadratic cost of global self-attention limits them to small patch-token grids, a bottleneck for dense prediction.</p>
-            <p>Task-agnostic feature upsamplers address this. Current state-of-the-art methods produce visually sharp features, but rely on shallow image encoders for guidance, which can introduce feature leakage, fragmentation and blur.</p>
-            <p>ViT-Up replaces external image guidance with queries built from intermediate ViT hidden states. It predicts features at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
-            <p>On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k and +5.7 J&amp;F in video object segmentation on DAVIS-2017 (k-NN label propagation).</p>
+            <p style="margin-top: 22px;">Vision Transformers learn strong, broadly reusable features, but the quadratic cost of global self-attention keeps their patch-token grids coarse. Dense prediction and fine-grained semantic correspondence need features at much higher resolution.</p>
+            <p>Task-agnostic feature upsamplers close this gap. The current state of the art relies on shallow image encoders for guidance, which yields visually sharp features but can introduce feature leakage, fragmentation and blur.</p>
+            <p>ViT-Up replaces this external guidance with queries built from the ViT's own intermediate hidden states. It predicts features at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
+            <p>On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k and +5.7 J&amp;F in video object segmentation on DAVIS-2017.</p>
           </div>
           <div class="code" id="quickstart">
             <div class="code-bar"><span>Quick start · Python</span><button class="copy" type="button" data-copy="quickstart-code">Copy</button></div>
@@ -574,12 +575,14 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
           </div>
         </div>
 
-        <div class="stats" aria-label="Result highlights">
-          <div class="stat"><div class="value">41.18<span class="delta">+6.20</span></div><div class="what">SPair-71k PCK@0.05</div><div class="ctx">DINOv3-S+, vs. best baseline</div></div>
-          <div class="stat"><div class="value">66.42<span class="delta">+3.08</span></div><div class="what">Cityscapes mIoU</div><div class="ctx">DINOv3-S+ linear probe</div></div>
-          <div class="stat"><div class="value">73.1<span class="delta">+5.7</span></div><div class="what">DAVIS-2017 k-NN J&amp;F</div><div class="ctx">DINOv3-S+, vs. best baseline</div></div>
-          <div class="stat"><div class="value">76.0<span class="delta">+2.1</span></div><div class="what">DAVIS-2017 k-NN J&amp;F</div><div class="ctx">DINOv2-S, vs. LILA</div></div>
+        <h3 class="stats-title">Other backbones</h3>
+        <div class="stats" aria-label="Results on other backbones">
+          <div class="stat"><div class="value">70.79<span class="delta">+3.47</span></div><div class="what">Linear probing</div><div class="ctx">Cityscapes mIoU · DINOv3-B</div></div>
+          <div class="stat"><div class="value">58.80<span class="delta">+8.79</span></div><div class="what">Semantic correspondence</div><div class="ctx">SPair-71k PCK@0.10 · DINOv3-B</div></div>
+          <div class="stat"><div class="value">67.42<span class="delta">+2.12</span></div><div class="what">Linear probing</div><div class="ctx">Cityscapes mIoU · DINOv2-S</div></div>
+          <div class="stat"><div class="value">76.0<span class="delta">+2.1</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · DINOv2-S</div></div>
         </div>
+        <p class="stats-note">Gains over the strongest baseline on each backbone.</p>
       </div>
     </section>
 
@@ -587,11 +590,11 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
       <div class="wrap">
         <div class="head">
           <h2>Method</h2>
-          <p class="lead">ViT-Up replaces external image guidance with layer-wise query construction from intermediate ViT hidden states, and is trained in two stages.</p>
+          <p class="lead">Each query starts from the backbone's patch embedding at its image coordinate. ViT-Up blocks then refine it by cross-attending to intermediate hidden states, while FeatX adds sub-token detail.</p>
         </div>
         <figure>
           <div class="frame pad"><img src="assets/architecture.jpg" alt="ViT-Up architecture diagram" loading="lazy"></div>
-          <figcaption>Frozen multi-resolution ViT teacher features supervise the student. Query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
+          <figcaption>(A) Stage 1 training: a frozen teacher supervises the decoded features at multiple scales. (B) Query embedding. (C) ViT-Up block. (D) FeatX block.</figcaption>
         </figure>
         <h3 class="stages-title">Training stages</h3>
         <div class="stages">
