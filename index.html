@@ -593,7 +593,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
         <div class="head"><h2>Method</h2></div>
         <div class="sub">
           <h3>Model architecture</h3>
-          <p>ViT-Up predicts a feature at any continuous image coordinate. Each query starts from the backbone's patch embedding at its coordinate (B) and is refined by ViT-Up blocks, each conditioned on an intermediate hidden state (A). Within a block (C), cross-attention to the backbone tokens supplies token-level context, while FeatX (D) decodes the nearest token at the query's relative position to recover sub-token detail. An output head then maps the refined query into the backbone feature space.</p>
+          <p>ViT-Up predicts a feature at any continuous image coordinate. Each query is initialized by bilinear interpolation of a high-resolution patch embedding (B) and refined by ViT-Up blocks, each conditioned on an intermediate hidden state (A). Within a block (C), cross-attention to the backbone tokens supplies token-level context, while FeatX (D) decodes the nearest token at the query's relative position to recover sub-token detail. An output head then maps the refined query into the backbone feature space.</p>
         </div>
         <figure>
           <div class="frame pad"><img src="assets/architecture.jpg" alt="ViT-Up architecture diagram" loading="lazy"></div>
