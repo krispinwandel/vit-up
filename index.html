@@ -113,6 +113,7 @@
       padding: 96px 0 clamp(56px, 9vh, 96px);
     }
     .eyebrow {
+      text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 10px;
@@ -123,6 +124,7 @@
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.72);
     }
+    .eyebrow:hover { color: #fff; }
     .eyebrow::before {
       content: "";
       width: 28px;
@@ -222,14 +224,6 @@
     /* ---------------------------------------------------------------- sections */
     section.block { padding: clamp(72px, 10vw, 120px) 0; }
     section.block + section.block { padding-top: 0; }
-    .kicker {
-      margin: 0 0 12px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
     h2 {
       margin: 0;
       font-size: clamp(32px, 4.4vw, 52px);
@@ -259,8 +253,8 @@
       gap: clamp(32px, 5vw, 64px);
       align-items: start;
     }
-    .overview p:not(.kicker) { margin: 0 0 16px; font-size: 18px; color: #2b303a; }
-    .overview p:not(.kicker):last-child { margin-bottom: 0; }
+    .overview p { margin: 0 0 16px; font-size: 18px; color: #2b303a; }
+    .overview p:last-child { margin-bottom: 0; }
 
     .code {
       position: relative;
@@ -367,6 +361,7 @@
       font-size: 12px;
       font-weight: 700;
     }
+    .stage h4 { margin: 0 0 6px; font-size: 17px; letter-spacing: -0.01em; }
     .stage p { margin: 0; color: var(--muted); font-size: 15px; }
 
     /* results */
@@ -444,7 +439,7 @@
       border-radius: var(--radius);
       background: var(--surface);
     }
-    .person img { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; object-position: top; }
+    .person img { width: 112px; height: 112px; border-radius: 18px; object-fit: cover; }
     .person h3 { font-size: 20px; }
     .person h3 a { text-decoration: none; }
     .person h3 a:hover { color: var(--accent); }
@@ -479,7 +474,7 @@
       .hero-caption { width: calc(100% - 28px); }
       .stats { grid-template-columns: 1fr; }
       .person { grid-template-columns: 1fr; gap: 14px; padding: 20px; }
-      .person img { width: 88px; height: 88px; }
+      .person img { width: 88px; height: 88px; border-radius: 14px; }
       .btn { height: 40px; padding: 0 14px; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -496,9 +491,8 @@
         <a href="#overview">Overview</a>
         <a href="#method">Method</a>
         <a href="#results">Results</a>
-        <a href="#video">Video</a>
         <a href="#citation">Citation</a>
-        <a href="#people">People</a>
+        <a href="#authors">Authors</a>
       </nav>
     </div>
   </header>
@@ -509,7 +503,7 @@
         <source src="assets/vit_up_56.mp4" type="video/mp4">
       </video>
       <div class="wrap hero-content">
-        <p class="eyebrow">arXiv 2606.14024</p>
+        <a class="eyebrow" href="https://arxiv.org/abs/2606.14024" target="_blank" rel="noopener noreferrer">arXiv 2606.14024</a>
         <h1>ViT-Up</h1>
         <p class="tagline">Faithful Feature Upsampling for Vision Transformers</p>
         <p class="authors">
@@ -551,10 +545,9 @@
       <div class="wrap">
         <div class="overview">
           <div>
-            <p class="kicker">Overview</p>
-            <h2>Backbone features at any image coordinate.</h2>
-            <p style="margin-top: 22px;">ViT-Up is an implicit feature upsampler for Vision Transformers. It predicts backbone-aligned features at arbitrary continuous image coordinates, decoding them from the backbone's intermediate hidden states rather than from an external guidance image. This avoids the feature leakage between visually similar regions that image-guided upsamplers show.</p>
-            <p>ViT-Up is pretrained once by self-supervised feature distillation on ImageNet-1K. Downstream heads then operate directly on dense DINOv3 or DINOv2 features, improving data-constrained dense prediction, fine-grained correspondence and video object segmentation.</p>
+            <h2>Overview</h2>
+            <p style="margin-top: 22px;">Image-guided feature upsamplers produce visually sharp features, but their shallow image encoders can introduce feature leakage, fragmentation and blur.</p>
+            <p>ViT-Up is an implicit feature upsampler for Vision Transformers that builds its queries from intermediate ViT hidden states instead. It predicts features at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
           </div>
           <div class="code" id="quickstart">
             <div class="code-bar"><span>Quick start · Python</span><button class="copy" type="button" data-copy="quickstart-code">Copy</button></div>
@@ -591,17 +584,16 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
     <section class="block" id="method">
       <div class="wrap">
         <div class="head">
-          <p class="kicker">Method</p>
-          <h2>Query features from inside the backbone.</h2>
-          <p class="lead">ViT-Up builds query features from intermediate ViT hidden states, which keeps them aligned with the backbone feature space while recovering sub-token detail.</p>
+          <h2>Method</h2>
+          <p class="lead">ViT-Up replaces external image guidance with layer-wise query construction from intermediate ViT hidden states, and is trained in two stages.</p>
         </div>
         <figure>
           <div class="frame pad"><img src="assets/architecture.jpg" alt="ViT-Up architecture diagram" loading="lazy"></div>
           <figcaption>Frozen multi-resolution ViT teacher features supervise the student. Query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
         </figure>
         <div class="stages">
-          <div class="stage"><span class="tag">Stage 1</span><p>Distills the frozen backbone into ViT-Up while training LoRA adapters of the backbone.</p></div>
-          <div class="stage"><span class="tag">Stage 2</span><p>Refines the model by self-distillation from the frozen Stage 1 model, with the adapters merged into the backbone.</p></div>
+          <div class="stage"><span class="tag">Stage 1</span><h4>Multi-scale feature supervision</h4><p>Distills features from a frozen teacher at multiple resolutions, with LoRA adapting the backbone.</p></div>
+          <div class="stage"><span class="tag">Stage 2</span><h4>Offset-guided refinement</h4><p>Self-distillation from the frozen Stage 1 model with learned query offsets, for increased sharpness and detail.</p></div>
         </div>
       </div>
     </section>
@@ -609,9 +601,8 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
     <section class="block" id="results">
       <div class="wrap">
         <div class="head">
-          <p class="kicker">Results</p>
-          <h2>Sharper features, without leakage.</h2>
-          <p class="lead">On DINOv3-S+, ViT-Up improves over image-guided upsamplers across dense probing, semantic and geometric correspondence, and video object segmentation.</p>
+          <h2>Results</h2>
+          <p class="lead">ViT-Up consistently outperforms state-of-the-art image-guided upsamplers in dense linear probing, semantic correspondence and video object segmentation.</p>
         </div>
 
         <article class="result" id="qualitative">
@@ -737,7 +728,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
 
     <section class="block cite" id="citation">
       <div class="wrap">
-        <div class="head"><p class="kicker">Citation</p><h2>BibTeX</h2></div>
+        <div class="head"><h2>Citation</h2></div>
         <div class="code">
           <div class="code-bar"><span>BibTeX</span><button class="copy" type="button" data-copy="bibtex">Copy</button></div>
 <pre id="bibtex">@misc{wandel2026vitupfaithfulfeatureupsampling,
@@ -753,12 +744,12 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
       </div>
     </section>
 
-    <section class="block" id="people">
+    <section class="block" id="authors">
       <div class="wrap">
-        <div class="head"><p class="kicker">People</p><h2>Authors</h2></div>
+        <div class="head"><h2>Authors</h2></div>
         <div class="people">
           <article class="person">
-            <img src="assets/krispin.png" alt="Krispin Wandel" loading="lazy">
+            <img src="assets/krispin.jpg" alt="Krispin Wandel" loading="lazy">
             <div>
               <h3><a href="https://link.discuna.com/vitupkw">Krispin Wandel</a></h3>
               <p class="role">Ph.D. student, Shanghai Jiao Tong University</p>
@@ -766,7 +757,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
             </div>
           </article>
           <article class="person">
-            <img src="assets/jingchuan.png" alt="Jingchuan Wang" loading="lazy">
+            <img src="assets/jingchuan.jpg" alt="Jingchuan Wang" loading="lazy">
             <div>
               <h3><a href="https://robotics.sjtu.edu.cn/en/minglu/465.html">Jingchuan Wang</a></h3>
               <p class="role">Professor, Shanghai Jiao Tong University</p>
@@ -774,7 +765,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
             </div>
           </article>
           <article class="person">
-            <img src="assets/hesheng.png" alt="Hesheng Wang" loading="lazy">
+            <img src="assets/hesheng.jpg" alt="Hesheng Wang" loading="lazy">
             <div>
               <h3><a href="https://irmv.sjtu.edu.cn/wanghesheng">Hesheng Wang</a></h3>
               <p class="role">Distinguished Professor, Shanghai Jiao Tong University</p>
