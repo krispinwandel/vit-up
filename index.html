@@ -546,8 +546,8 @@
         <div class="overview">
           <div>
             <h2>Overview</h2>
-            <p style="margin-top: 22px;">Vision Transformers provide strong, broadly reusable features, but the quadratic cost of global self-attention limits them to small patch-token grids. Task-agnostic feature upsamplers lift these coarse features to the resolution that dense prediction needs.</p>
-            <p>Recent upsamplers produce visually sharp features, but their reliance on shallow image encoders for guidance can introduce feature leakage, fragmentation and blur.</p>
+            <p style="margin-top: 22px;">Vision Transformers provide strong, broadly reusable features, but the quadratic cost of global self-attention limits them to small patch-token grids, a bottleneck for dense prediction.</p>
+            <p>Task-agnostic feature upsamplers address this bottleneck. Current state-of-the-art methods produce visually sharp features, but rely on shallow image encoders for guidance, which can introduce feature leakage, fragmentation and blur.</p>
             <p>ViT-Up replaces external image guidance with queries built from intermediate ViT hidden states. It predicts features at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
             <p>On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k and +5.7 J&amp;F in video object segmentation on DAVIS-2017 (k-NN label propagation).</p>
           </div>
