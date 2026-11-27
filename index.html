@@ -547,10 +547,10 @@
         <div class="overview">
           <div>
             <h2>Overview</h2>
-            <p style="margin-top: 22px;">Vision Transformers (ViTs) have become a dominant architecture for visual representation learning, providing strong and broadly reusable features. However, because the cost of global self-attention grows quadratically with the number of tokens, ViTs operate on coarse patch-token grids, whereas dense prediction and fine-grained semantic correspondence require features at much higher resolution.</p>
-            <p>Task-agnostic feature upsamplers aim to close this gap. While current state-of-the-art methods produce visually sharp features, they rely on shallow image encoders for guidance, which can introduce feature leakage, fragmentation and blur.</p>
-            <p>To address this, ViT-Up replaces external image guidance with queries built from the ViT's own intermediate hidden states. This enables it to predict features at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
-            <p>In our experiments on DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k, and +5.7 J&amp;F in video object segmentation on DAVIS-2017.</p>
+            <p style="margin-top: 22px;">Vision Transformers (ViTs) have become a dominant architecture for visual representation learning. However, the quadratic cost of global self-attention limits them to coarse patch-token grids, whereas dense prediction and fine-grained semantic correspondence require much higher resolution.</p>
+            <p>Task-agnostic feature upsamplers aim to close this gap. While current state-of-the-art methods produce visually sharp features, their shallow guidance encoders can introduce feature leakage, fragmentation and blur.</p>
+            <p>ViT-Up instead builds its queries from the ViT's own intermediate hidden states. This enables feature prediction at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
+            <p>On DINOv3-S+, it improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k, and +5.7 J&amp;F in video object segmentation on DAVIS-2017.</p>
           </div>
           <div class="code" id="quickstart">
             <div class="code-bar"><span>Quick start · Python</span><button class="copy" type="button" data-copy="quickstart-code">Copy</button></div>
