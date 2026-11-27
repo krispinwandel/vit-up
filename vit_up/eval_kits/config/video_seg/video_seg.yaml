@@ -1,0 +1,31 @@
+# DAVIS-2017 video object segmentation (LILA protocol), e.g.
+#   python -m vit_up.eval_kits.video_seg_toolkit.run_video_seg benchmark=vos_knn model=dinov2_small/vit_up
+#   python -m vit_up.eval_kits.video_seg_toolkit.run_video_seg benchmark=vos_knn model=dinov2_small/lila
+#   python -m vit_up.eval_kits.video_seg_toolkit.run_video_seg benchmark=vos_knn model=none \
+#     encoder.backbone_model_name=facebook/dinov2-small   # backbone baseline
+defaults:
+  - benchmark: vos_knn
+  - /model@model: dinov2_small/vit_up
+  - _self_
+
+data_root: data
+output_dir: outputs/eval/video_seg
+
+# Frozen backbone tokens for the probes' encoder branch (shared by every model).
+# `auto` takes the model's backbone (ViT-Up, LILA, baselines with a Hugging Face backbone);
+# set the Hugging Face name explicitly otherwise and for model=none.
+encoder:
+  backbone_model_name: auto
+  revision: null
+
+# LILA layer-normalizes its decoder features; `none` feeds upsampler outputs unchanged.
+decoder_norm: layernorm
+# Images per upsampler forward (null = whole batch); lower it if the upsampler runs out of memory.
+decoder_batch_size: 8
+seed: 0
+
+hydra:
+  searchpath:
+    - pkg://vit_up.eval_kits.config
+  run:
+    dir: ${output_dir}/${hydra:runtime.choices.model}/${now:%Y-%m-%d_%H-%M-%S}/${hydra:runtime.choices.benchmark}

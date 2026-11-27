@@ -1,0 +1,3 @@
+# No upsampler: only the frozen backbone tokens (the plain-backbone rows of the LILA tables).
+# Set encoder.backbone_model_name.
+name: none

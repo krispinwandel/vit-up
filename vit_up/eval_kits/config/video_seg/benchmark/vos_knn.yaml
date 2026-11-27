@@ -1,0 +1,20 @@
+# DAVIS-2017 val, local k-NN label propagation (LILA eval_vosknn.py).
+davis_root: ${data_root}/DAVIS2017
+split_file: null
+resize_input: false           # true squashes frames to resize_input_size^2 (LILA README command)
+resize_input_size: 476
+resample_size: 476            # LILA hard-codes PatchResample(476, patch_size=14)
+resample_patch_size: 14
+attn_window: 25
+feat_grid_size: 60            # features are bilinearly resized to this shorter side
+context_size: 7               # first frame + the last 7 predicted frames
+num_nn: 5
+temp: 0.1
+# Feature branches evaluated (each with its own probe / propagation; features are computed once):
+# backbone tokens only, the model's dense features only, and both (LILA's protocol, alpha weights).
+modes: [backbone, dense, combined]
+alpha_enc: 1.0
+alpha_dec: 1.0
+# Average (instead of sum) the two branches' soft masks; false reproduces LILA's released code, which
+# overflows with two branches (see benchmarks.vos_knn).
+normalize_branch_masks: true

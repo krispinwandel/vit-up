@@ -34,7 +34,7 @@ def test_experiment_composes(experiment):
 
 @pytest.mark.parametrize("config_dir, config_name", [("probing", "probing"), ("correspondence_2d", "correspondence_2d"),
                                                      ("geometric_correspondence", "navi_correspondence"),
-                                                     ("runtime", "runtime_bench")])
+                                                     ("runtime", "runtime_bench"), ("video_seg", "video_seg")])
 @pytest.mark.parametrize("model", EVAL_MODELS)
 def test_eval_config_composes(config_dir, config_name, model):
     with initialize_config_dir(config_dir=str(EVAL_CONFIG / config_dir), version_base=None):
@@ -42,3 +42,18 @@ def test_eval_config_composes(config_dir, config_name, model):
     cfg = OmegaConf.to_container(cfg.model, resolve=True, throw_on_missing=True)
     assert cfg["feature_dim"] in (384, 768)
     get_class(cfg["_target_"])
+
+
+VIDEO_SEG_BENCHMARKS = sorted(p.stem for p in (EVAL_CONFIG / "video_seg" / "benchmark").glob("*.yaml"))
+
+
+@pytest.mark.parametrize("benchmark", VIDEO_SEG_BENCHMARKS)
+@pytest.mark.parametrize("model", ["none", "dinov2_small/lila", "dinov2_small/vit_up"])
+def test_video_seg_config_composes(benchmark, model):
+    """Video segmentation has its own encoder-only (`none`) and LILA model options."""
+    with initialize_config_dir(config_dir=str(EVAL_CONFIG / "video_seg"), version_base=None):
+        cfg = compose(config_name="video_seg", overrides=[f"benchmark={benchmark}", f"model={model}"])
+    cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    assert cfg["benchmark"]
+    if model != "none":
+        get_class(cfg["model"]["_target_"])

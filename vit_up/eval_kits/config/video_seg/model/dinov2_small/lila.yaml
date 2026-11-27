@@ -1,0 +1,7 @@
+# Released LILA DINOv2-S14 (YT-VOS) decoder features; runs google-research/lila code checked
+# out at a pinned commit (see vit_up/eval_kits/upsamplers/lila.py).
+_target_: vit_up.eval_kits.upsamplers.lila.LILAUpsampler
+name: lila_dinov2_small
+entrypoint: lila_dinov2_vits14
+feature_dim: 128
+local_repo: null

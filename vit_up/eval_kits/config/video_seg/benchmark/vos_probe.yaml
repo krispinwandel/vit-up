@@ -1,0 +1,16 @@
+# DAVIS-2017 val, linear probe fit on the first frame of each sequence (LILA eval_vos.py).
+davis_root: ${data_root}/DAVIS2017
+split_file: null              # default: <davis_root>/ImageSets/2017/val.txt (30 sequences)
+# Frames are resampled to this shorter side (476x840). resize_input=true additionally squashes
+# them to a square as in LILA's README command; aspect-preserving input reproduces the paper's baseline.
+resize_input: false
+resize_input_size: 476
+lr: 0.0005
+weight_decay: 0.0001
+num_steps: 2000
+num_seeds: 10                 # probes with different random initializations; mean and std are reported
+# Feature branches evaluated (each with its own probe / propagation; features are computed once):
+# backbone tokens only, the model's dense features only, and both (LILA's protocol, alpha weights).
+modes: [backbone, dense, combined]
+alpha_enc: 1.0
+alpha_dec: 1.0

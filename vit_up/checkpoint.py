@@ -30,6 +30,7 @@ RELEASES = {
     "dinov3_base": "DINOv3-B, Stage 2",
     "dinov3_base_stage1": "DINOv3-B, Stage 1",
     "dinov2_small": "DINOv2-S, Stage 2",
+    "dinov2_small_g32_64": "DINOv2-S, Stage 2, trained on 32x32 and 64x64 backbone grids (448 and 896 px)",
 }
 
 

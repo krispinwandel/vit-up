@@ -36,6 +36,16 @@ def vit_up_dinov3_base(pretrained: bool = True, **kwargs):
     return _load("dinov3_base", pretrained, **kwargs)
 
 
+def vit_up_dinov3_base_stage1(pretrained: bool = True, **kwargs):
+    """DINOv3-B, Stage 1."""
+    return _load("dinov3_base_stage1", pretrained, **kwargs)
+
+
 def vit_up_dinov2_small(pretrained: bool = True, **kwargs):
     """DINOv2-S, Stage 2."""
     return _load("dinov2_small", pretrained, **kwargs)
+
+
+def vit_up_dinov2_small_g32_64(pretrained: bool = True, **kwargs):
+    """DINOv2-S, Stage 2, trained at 448 and 896 px (32x32 and 64x64 backbone grids); defaults to 896 px."""
+    return _load("dinov2_small_g32_64", pretrained, **kwargs)

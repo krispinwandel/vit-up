@@ -1,0 +1,27 @@
+# @package _global_
+# Continue Stage 1 with the student at 448 and 896 px (32 and 64 backbone tokens per side).
+defaults:
+  - /train
+  - override /model: dinov2_small
+  - override /views: mixed
+  - override /adaptation: inherit
+  - override /schedule: stage2
+  - _self_
+
+name: stage1_dinov2_small_g32_64
+initialization: outputs/training/stage1_dinov2_small/checkpoints/best
+model:
+  image_sizes: [448, 896]
+schedule:
+  batch_size: 8
+  accumulate_grad_batches: 2
+trainer:
+  val_check_interval: 1000
+objective:
+  blocks_per_chunk: 49
+  loss:
+    distances:
+      - _target_: vit_up.training.losses.L2Distance
+      - _target_: vit_up.training.losses.CosineDistance
+      - _target_: vit_up.training.losses.KLDistance
+        tau: 0.5
