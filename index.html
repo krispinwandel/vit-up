@@ -344,11 +344,11 @@
       font-size: 14px;
       color: var(--muted);
     }
+    .stages-title { margin: 48px 0 16px; }
     .stages {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
-      margin-top: 28px;
     }
     .stage { padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
     .stage .tag {
@@ -548,6 +548,7 @@
             <h2>Overview</h2>
             <p style="margin-top: 22px;">Image-guided feature upsamplers produce visually sharp features, but their shallow image encoders can introduce feature leakage, fragmentation and blur.</p>
             <p>ViT-Up is an implicit feature upsampler for Vision Transformers that builds its queries from intermediate ViT hidden states instead. It predicts features at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
+            <p>On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU on Cityscapes, +5.12 PCK@0.10 on SPair-71k and +5.7 J&amp;F on DAVIS-2017 video object segmentation.</p>
           </div>
           <div class="code" id="quickstart">
             <div class="code-bar"><span>Quick start · Python</span><button class="copy" type="button" data-copy="quickstart-code">Copy</button></div>
@@ -591,6 +592,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
           <div class="frame pad"><img src="assets/architecture.jpg" alt="ViT-Up architecture diagram" loading="lazy"></div>
           <figcaption>Frozen multi-resolution ViT teacher features supervise the student. Query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
         </figure>
+        <h3 class="stages-title">Training stages</h3>
         <div class="stages">
           <div class="stage"><span class="tag">Stage 1</span><h4>Multi-scale feature supervision</h4><p>Distills features from a frozen teacher at multiple resolutions, with LoRA adapting the backbone.</p></div>
           <div class="stage"><span class="tag">Stage 2</span><h4>Offset-guided refinement</h4><p>Self-distillation from the frozen Stage 1 model with learned query offsets, for increased sharpness and detail.</p></div>
@@ -607,7 +609,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
 
         <article class="result" id="qualitative">
           <div class="head"><h3>Qualitative comparison</h3><p>PCA of the dense features (top rows) and similarity to a query point (bottom rows) on a 448×448 input with a native 28×28 backbone grid. ViT-Up gives coherent structure and selective similarity maps; NAF, AnyUp and JAFAR look sharp but fragment and leak into nearby structures, and UpLiFT is smoother but weaker on small regions.</p></div>
-          <figure><div class="frame"><img src="assets/attn.jpg" alt="Qualitative comparison of feature upsampling methods on DINOv3-S+" loading="lazy"></div></figure>
+          <figure><div class="frame pad"><img src="assets/attn.jpg" alt="Qualitative comparison of feature upsampling methods on DINOv3-S+" loading="lazy"></div></figure>
         </article>
 
         <article class="result" id="probing">
@@ -651,7 +653,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
             <p class="note">Best per column underlined. ViT-Up + LoRA and + Stage 2 are the released <code>dinov3_splus_stage1</code> and <code>dinov3_splus</code> models.</p>
           </div>
           <figure>
-            <div class="frame"><img src="assets/probing.jpg" alt="Qualitative dense probing results on DINOv3-S+" loading="lazy"></div>
+            <div class="frame pad"><img src="assets/probing.jpg" alt="Qualitative dense probing results on DINOv3-S+" loading="lazy"></div>
             <figcaption>Segmentation (top) and depth (bottom) predictions with PCA of the dense features. ViT-Up gives cleaner masks and more consistent depth, including fine structures such as the person's head and the small distant ducks.</figcaption>
           </figure>
         </article>
@@ -690,7 +692,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
             <p class="note">Best per column underlined.</p>
           </div>
           <figure>
-            <div class="frame"><img src="assets/matching.jpg" alt="Qualitative semantic correspondence results on SPair-71k" loading="lazy"></div>
+            <div class="frame pad"><img src="assets/matching.jpg" alt="Qualitative semantic correspondence results on SPair-71k" loading="lazy"></div>
             <figcaption>Nearest-neighbor matches on SPair-71k (green: correct, red: incorrect). ViT-Up keeps part-level detail such as the bird tail and the partially occluded horse tail, where NAF and UpLiFT fragment or blur.</figcaption>
           </figure>
         </article>
