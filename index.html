@@ -133,18 +133,24 @@
       background: var(--spectrum);
     }
     .hero h1 {
+      display: flex;
+      align-items: center;
+      gap: 0.16em;
       margin: 0;
-      padding-bottom: 0.06em;
       font-size: clamp(64px, 12vw, 148px);
       line-height: 0.92;
       letter-spacing: -0.045em;
       font-weight: 800;
-      background: linear-gradient(100deg, #ffffff 0%, #c7d2fe 20%, #a5b4fc 36%, #f0abfc 54%, #fda4af 72%, #fde68a 88%, #ffffff 100%);
+      filter: drop-shadow(0 6px 28px rgba(5, 6, 10, 0.45));
+    }
+    .hero h1 .mark { width: 0.74em; height: auto; flex: none; color: #fff; }
+    .hero h1 .title {
+      padding-bottom: 0.06em;
+      background: linear-gradient(100deg, #38bdf8 0%, #818cf8 24%, #e879f9 48%, #fb7185 72%, #fbbf24 92%, #38bdf8 100%);
       background-size: 180% 100%;
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
-      filter: drop-shadow(0 6px 28px rgba(5, 6, 10, 0.45));
       animation: sheen 9s ease-in-out infinite alternate;
     }
     @keyframes sheen { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
@@ -495,7 +501,7 @@
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .scroll-cue::after { animation: none; }
-      .hero h1 { animation: none; background-position: 60% 50%; }
+      .hero h1 .title { animation: none; background-position: 60% 50%; }
     }
   </style>
 </head>
@@ -520,7 +526,7 @@
       </video>
       <div class="wrap hero-content">
         <a class="eyebrow" href="https://arxiv.org/abs/2606.14024" target="_blank" rel="noopener noreferrer">arXiv 2606.14024</a>
-        <h1>ViT-Up</h1>
+        <h1><svg class="mark" viewBox="4 9 104 94" fill="currentColor" aria-hidden="true"><circle cx="17" cy="75.4834" r="7"/><circle cx="36.7595" cy="75.4834" r="7"/><circle cx="55.3662" cy="75.4834" r="7"/><circle cx="75.0066" cy="75.4834" r="7"/><circle cx="95" cy="75.4834" r="7"/><circle cx="18.9436" cy="51.5398" r="8.94363"/><circle cx="44.1895" cy="51.5398" r="8.94363"/><circle cx="67.9627" cy="51.5398" r="8.94363"/><circle cx="93.0564" cy="51.5398" r="8.94363"/><circle cx="22.298" cy="22.298" r="12.298"/><circle cx="57.0126" cy="22.298" r="12.298"/><circle cx="89.702" cy="22.298" r="12.298"/><circle cx="16" cy="96.4834" r="6"/><circle cx="32" cy="96.4834" r="6"/><circle cx="48" cy="96.4834" r="6"/><circle cx="64" cy="96.4834" r="6"/><circle cx="80" cy="96.4834" r="6"/><circle cx="96" cy="96.4834" r="6"/></svg><span class="title">ViT-Up</span></h1>
         <p class="tagline">Faithful Feature Upsampling for Vision Transformers</p>
         <p class="authors">
           <a href="https://link.discuna.com/vitupkw">Krispin Wandel</a><span class="sep">·</span><a href="https://robotics.sjtu.edu.cn/en/minglu/465.html">Jingchuan Wang</a><span class="sep">·</span><a href="https://irmv.sjtu.edu.cn/wanghesheng">Hesheng Wang</a>
