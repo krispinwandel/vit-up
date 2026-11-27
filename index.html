@@ -20,1187 +20,809 @@
   <title>ViT-Up | Faithful Feature Upsampling for Vision Transformers</title>
   <style>
     :root {
-      --bg: #f7f4ee;
-      --paper: #fffdf8;
-      --ink: #181716;
-      --muted: #62605b;
-      --line: #ded8ce;
-      --soft: #eee7dd;
-      --accent: #b64232;
-      --accent-2: #0d766e;
-      --accent-3: #b37612;
-      --shadow: 0 22px 70px rgba(24, 23, 22, 0.12);
-      --radius: 8px;
-      --max: 1180px;
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --ink: #0e1116;
+      --muted: #5c6370;
+      --faint: #8a909b;
+      --line: #e6e7ea;
+      --tint: #f3f1ff;
+      --accent: #5b4bdb;
+      --up: #0f8a5f;
+      --down: #c2410c;
+      --spectrum: linear-gradient(90deg, #38bdf8, #818cf8, #e879f9, #fb7185, #fbbf24);
+      --radius: 14px;
+      --max: 1120px;
+      --font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Consolas, monospace;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 72px; }
     body {
       margin: 0;
+      background: var(--bg);
       color: var(--ink);
-      background:
-        linear-gradient(180deg, rgba(182, 66, 50, 0.09), transparent 360px),
-        radial-gradient(circle at 86% 8%, rgba(13, 118, 110, 0.16), transparent 26rem),
-        var(--bg);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.55;
-      overflow-x: hidden;
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
+    a { color: inherit; }
+    img, video { display: block; max-width: 100%; }
+    .wrap { width: min(var(--max), calc(100% - 40px)); margin: 0 auto; }
 
-    a {
-      color: inherit;
-      text-decoration: none;
+    /* ---------------------------------------------------------------- navigation */
+    .nav {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 20;
+      transition: background 0.25s, border-color 0.25s, color 0.25s;
+      border-bottom: 1px solid transparent;
+      color: #fff;
     }
-
-    a:hover {
-      color: var(--accent);
-    }
-
-    img {
-      display: block;
-      max-width: 100%;
-    }
-
-    .shell {
-      width: min(var(--max), calc(100% - 32px));
-      margin: 0 auto;
-    }
-
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      border-bottom: 1px solid rgba(222, 216, 206, 0.75);
-      background: rgba(247, 244, 238, 0.88);
-      backdrop-filter: blur(18px);
-    }
-
-    .topbar .shell {
+    .nav .wrap {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      min-height: 62px;
-      gap: 24px;
+      height: 60px;
+      gap: 20px;
+    }
+    .nav .brand { font-weight: 800; letter-spacing: -0.02em; text-decoration: none; font-size: 17px; }
+    .nav nav { display: flex; gap: 26px; font-size: 14px; font-weight: 550; }
+    .nav nav a { text-decoration: none; opacity: 0.82; }
+    .nav nav a:hover { opacity: 1; }
+    .nav.solid {
+      background: rgba(250, 250, 250, 0.86);
+      backdrop-filter: saturate(1.6) blur(16px);
+      -webkit-backdrop-filter: saturate(1.6) blur(16px);
+      border-bottom-color: var(--line);
+      color: var(--ink);
     }
 
-    .brand {
-      font-size: 16px;
-      font-weight: 850;
-    }
-
-    nav {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 16px;
-      color: var(--muted);
-      font-size: 14px;
-      font-weight: 700;
-    }
-
+    /* ---------------------------------------------------------------- hero */
     .hero {
-      padding: 72px 0 38px;
-    }
-
-    .hero-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
-      align-items: center;
-      gap: 34px;
-    }
-
-    .hero-grid > *,
-    .hero-media,
-    .hero-code,
-    .stat,
-    .metric,
-    .bar-panel,
-    .table-wrap,
-    .bio-card {
-      min-width: 0;
-    }
-
-    .hero-media {
-      display: grid;
-      gap: 16px;
-    }
-
-    h1 {
-      margin: 18px 0 16px;
-      max-width: 780px;
-      font-size: clamp(48px, 9vw, 104px);
-      line-height: 0.9;
-      letter-spacing: 0;
-    }
-
-    .subtitle {
-      max-width: 720px;
-      color: #34312d;
-      font-size: clamp(16px, 1.7vw, 21px);
-      line-height: 1.38;
-      font-weight: 620;
-    }
-
-    .authors {
+      position: relative;
+      min-height: 100svh;
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px 14px;
-      margin: -4px 0 18px;
-      color: var(--muted);
-      font-size: 16px;
-      font-weight: 720;
+      flex-direction: column;
+      justify-content: flex-end;
+      overflow: hidden;
+      background: #05060a;
+      color: #fff;
     }
-
-    .authors a {
-      color: #3a3630;
-      text-decoration: underline;
-      text-decoration-color: rgba(182, 66, 50, 0.35);
-      text-underline-offset: 4px;
+    .hero video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 28px;
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(5, 6, 10, 0.55) 0%, rgba(5, 6, 10, 0) 22%),
+        linear-gradient(0deg, rgba(5, 6, 10, 0.92) 0%, rgba(5, 6, 10, 0.55) 34%, rgba(5, 6, 10, 0) 62%);
+      pointer-events: none;
     }
-
-    .button {
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      padding: 96px 0 clamp(56px, 9vh, 96px);
+    }
+    .eyebrow {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      max-width: 100%;
-      min-height: 42px;
-      padding: 0 16px;
-      border: 1px solid var(--ink);
-      border-radius: 6px;
-      background: var(--ink);
-      color: #fffdf8;
-      font-size: 14px;
-      font-weight: 760;
-      box-shadow: 0 10px 24px rgba(24, 23, 22, 0.16);
+      gap: 10px;
+      margin: 0 0 18px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.72);
     }
-
-    .button svg {
-      width: 22px;
-      height: 17px;
-      flex: 0 0 auto;
+    .eyebrow::before {
+      content: "";
+      width: 28px;
+      height: 3px;
+      border-radius: 3px;
+      background: var(--spectrum);
     }
-
-    .button svg:last-child:not(:first-child) {
-      width: 15px;
-      height: 15px;
-    }
-
-    .button img {
-      width: 18px;
-      height: 24px;
-      flex: 0 0 auto;
-      object-fit: contain;
-    }
-
-    .button:hover {
-      color: #fffdf8;
-      transform: translateY(-1px);
-    }
-
-    .button.secondary {
-      border-color: var(--line);
-      background: rgba(255, 253, 248, 0.86);
-      color: var(--ink);
-      box-shadow: none;
-    }
-
-    .hero-figure {
-      position: relative;
+    .hero h1 {
       margin: 0;
-      padding: clamp(14px, 2vw, 24px);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
+      font-size: clamp(64px, 12vw, 148px);
+      line-height: 0.92;
+      letter-spacing: -0.045em;
+      font-weight: 800;
+    }
+    .hero .tagline {
+      margin: 18px 0 0;
+      max-width: 760px;
+      font-size: clamp(20px, 2.6vw, 30px);
+      line-height: 1.2;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+    .hero .authors {
+      margin: 22px 0 0;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+    .hero .authors a { text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.35); }
+    .hero .authors a:hover { border-bottom-color: #fff; }
+    .hero .authors .sep { margin: 0 10px; opacity: 0.45; }
+    .hero .affiliation { display: block; margin-top: 4px; font-size: 14px; color: rgba(255, 255, 255, 0.58); }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn svg, .btn img { width: 17px; height: 17px; flex: none; }
+    .btn.primary { background: #fff; color: #0e1116; }
+    .btn.glass {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .btn.glass:hover { background: rgba(255, 255, 255, 0.18); }
+
+    .hero-caption {
+      position: absolute;
+      right: max(20px, calc((100% - var(--max)) / 2));
+      bottom: clamp(56px, 9vh, 96px);
+      z-index: 1;
+      max-width: 290px;
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.62);
+      text-align: right;
+    }
+    .hero-caption strong { color: rgba(255, 255, 255, 0.9); font-weight: 600; }
+    .scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      z-index: 1;
+      width: 26px;
+      height: 40px;
+      margin-left: -13px;
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      border-radius: 14px;
+    }
+    .scroll-cue::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 8px;
+      width: 4px;
+      height: 8px;
+      margin-left: -2px;
+      border-radius: 2px;
       background: #fff;
-      box-shadow: var(--shadow);
+      animation: cue 1.8s infinite;
+    }
+    @keyframes cue { 0% { opacity: 0; transform: translateY(0); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(12px); } }
+
+    /* ---------------------------------------------------------------- sections */
+    section.block { padding: clamp(72px, 10vw, 120px) 0; }
+    section.block + section.block { padding-top: 0; }
+    .kicker {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    h2 {
+      margin: 0;
+      font-size: clamp(32px, 4.4vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+      font-weight: 750;
+    }
+    h3 {
+      margin: 0;
+      font-size: clamp(22px, 2.4vw, 28px);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      font-weight: 700;
+    }
+    .lead {
+      margin: 18px 0 0;
+      max-width: 720px;
+      font-size: clamp(17px, 1.6vw, 19px);
+      color: var(--muted);
+    }
+    .head { margin-bottom: 40px; }
+
+    /* overview */
+    .overview {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: clamp(32px, 5vw, 64px);
+      align-items: start;
+    }
+    .overview p:not(.kicker) { margin: 0 0 16px; font-size: 18px; color: #2b303a; }
+    .overview p:not(.kicker):last-child { margin-bottom: 0; }
+
+    .code {
+      position: relative;
+      border-radius: var(--radius);
+      background: #0d1017;
+      color: #e6e9ef;
+      box-shadow: 0 24px 60px -24px rgba(14, 17, 22, 0.45);
       overflow: hidden;
     }
-
-    .hero-figure img {
-      width: 100%;
-      aspect-ratio: 2664 / 1244;
-      object-fit: contain;
-      background: #fff;
-      margin: 0 auto;
+    .code-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 10px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      font-size: 12.5px;
+      color: #8b93a3;
     }
-
-    .caption {
-      margin: clamp(14px, 2vw, 24px) calc(clamp(14px, 2vw, 24px) * -1) calc(clamp(14px, 2vw, 24px) * -1);
-      padding: 12px 14px;
-      border-top: 1px solid var(--line);
-      color: var(--muted);
-      background: var(--paper);
-      font-size: 13px;
-      overflow-wrap: anywhere;
+    .copy {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: transparent;
+      color: #c9cfda;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
     }
+    .copy:hover { background: rgba(255, 255, 255, 0.07); }
+    .copy.done { color: #86efac; border-color: rgba(134, 239, 172, 0.35); }
+    pre {
+      margin: 0;
+      padding: 18px 20px 20px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.65;
+    }
+    .k { color: #c4a7ff; }
+    .s { color: #a5e3a1; }
+    .n { color: #f6c177; }
+    .f { color: #7dd3fc; }
+    .c { color: #6b7385; font-style: italic; }
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-top: 34px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: clamp(48px, 7vw, 80px);
     }
-
     .stat {
-      padding: 18px;
+      position: relative;
+      padding: 22px 22px 20px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      background: rgba(255, 253, 248, 0.72);
-    }
-
-    .stat strong {
-      display: block;
-      font-size: 28px;
-      line-height: 1;
-    }
-
-    .stat span {
-      display: block;
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 650;
-    }
-
-    .stat em {
-      display: block;
-      margin-top: 6px;
-      color: var(--accent-2);
-      font-size: 13px;
-      font-style: normal;
-      font-weight: 800;
-    }
-
-    section {
-      padding: 54px 0;
-    }
-
-    .section-head {
-      display: grid;
-      grid-template-columns: minmax(220px, 0.42fr) minmax(0, 0.58fr);
-      gap: 32px;
-      align-items: end;
-      margin-bottom: 22px;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: clamp(30px, 4vw, 52px);
-      line-height: 0.98;
-      letter-spacing: 0;
-    }
-
-    .section-head p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 17px;
-    }
-
-    .section-head.stacked {
-      display: block;
-      max-width: 820px;
-    }
-
-    .section-head.stacked p {
-      margin-top: 12px;
-    }
-
-    .figure-panel,
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--paper);
-      box-shadow: 0 16px 50px rgba(24, 23, 22, 0.08);
+      background: var(--surface);
       overflow: hidden;
     }
-
-    .figure-panel {
-      margin: 0;
-      padding: clamp(14px, 2vw, 24px);
-      background: #fff;
+    .stat::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 3px;
+      background: var(--spectrum);
     }
+    .stat .value { font-size: 38px; font-weight: 750; letter-spacing: -0.03em; line-height: 1; }
+    .stat .delta { margin-left: 8px; font-size: 15px; font-weight: 650; color: var(--up); letter-spacing: 0; }
+    .stat .what { margin-top: 10px; font-size: 14px; font-weight: 600; }
+    .stat .ctx { margin-top: 2px; font-size: 13px; color: var(--faint); }
 
-    .figure-panel img {
-      width: 100%;
-      border-radius: 4px;
-      background: #fff;
-    }
-
-    .panel {
-      padding: 22px;
-    }
-
-    .panel h3 {
-      margin: 0 0 10px;
-      font-size: 20px;
-    }
-
-    .panel p {
-      margin: 0;
-      color: var(--muted);
-    }
-
-    .result-subsections {
-      display: grid;
-      gap: 34px;
-    }
-
-    .result-subsection {
-      display: grid;
-      gap: 14px;
-    }
-
-    .result-subsection h3 {
-      margin: 0;
-      font-size: clamp(22px, 2.5vw, 30px);
-      line-height: 1.08;
-      letter-spacing: 0;
-    }
-
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .metric {
-      padding: 16px;
+    /* figures */
+    figure { margin: 0; }
+    .frame {
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      background: var(--paper);
+      background: var(--surface);
+      overflow: hidden;
     }
-
-    .metric .label {
-      min-height: 40px;
+    .frame img { width: 100%; background: #fff; }
+    .frame.pad img { padding: clamp(10px, 2vw, 22px); }
+    figcaption {
+      margin-top: 14px;
+      max-width: 860px;
+      font-size: 14px;
       color: var(--muted);
-      font-size: 13px;
-      font-weight: 730;
     }
-
-    .metric .value {
-      margin-top: 8px;
-      color: var(--accent);
-      font-size: 30px;
-      line-height: 1;
-      font-weight: 850;
-    }
-
-    .metric .note {
-      margin-top: 8px;
-      color: #3c3934;
-      font-size: 13px;
-    }
-
-    .bars {
+    .stages {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin: 12px 0 20px;
+      gap: 14px;
+      margin-top: 28px;
     }
-
-    .bar-panel {
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: rgba(255, 253, 248, 0.78);
-    }
-
-    .bar-panel h3 {
-      margin: 0 0 14px;
-      font-size: 18px;
-    }
-
-    .bar-row {
-      display: grid;
-      grid-template-columns: 112px minmax(0, 1fr) 54px;
-      gap: 10px;
-      align-items: center;
-      margin: 10px 0;
-      color: var(--muted);
-      font-size: 13px;
+    .stage { padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    .stage .tag {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: var(--tint);
+      color: var(--accent);
+      font-size: 12px;
       font-weight: 700;
     }
+    .stage p { margin: 0; color: var(--muted); font-size: 15px; }
 
-    .track {
-      height: 10px;
-      border-radius: 999px;
-      background: #e4ddd3;
-      overflow: hidden;
-    }
+    /* results */
+    .result { margin-top: clamp(64px, 8vw, 96px); }
+    .result:first-of-type { margin-top: 0; }
+    .result .head { margin-bottom: 24px; }
+    .result .head p { margin: 10px 0 0; max-width: 760px; color: var(--muted); }
+    .result figure + .table-card, .result .table-card + figure { margin-top: 24px; }
 
-    .fill {
-      display: block;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, var(--accent), var(--accent-3));
-    }
-
-    .fill.teal {
-      background: linear-gradient(90deg, var(--accent-2), #49a391);
-    }
-
-    .table-block {
-      overflow: hidden;
+    .table-card {
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      background: var(--paper);
+      background: var(--surface);
+      overflow: hidden;
     }
-
-    .table-title {
+    .table-card .note {
       margin: 0;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
-      color: var(--muted);
-      text-align: center;
+      padding: 12px 18px;
+      border-top: 1px solid var(--line);
       font-size: 13px;
-      line-height: 1.45;
-      font-weight: 650;
-      overflow-wrap: anywhere;
+      color: var(--faint);
     }
-
-    .table-wrap {
-      overflow-x: auto;
-      max-width: 100%;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--paper);
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .table-block .table-wrap {
-      border: 0;
-      border-radius: 0;
-    }
-
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table {
       width: 100%;
-      min-width: 880px;
       border-collapse: collapse;
-      border-spacing: 0;
       font-size: 14px;
+      font-variant-numeric: tabular-nums;
     }
-
-    .table-wrap.compact-method table {
-      min-width: 680px;
-    }
-
-    th,
-    td {
-      padding: 11px 12px;
-      border-bottom: 1px solid var(--line);
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
-    th {
-      color: #3a3630;
-      background: #f1ebe1;
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-
+    th, td { padding: 11px 14px; text-align: right; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
     thead th {
-      border-bottom-color: #cfc6b8;
-      text-align: center;
-    }
-
-    thead tr:first-child th:first-child,
-    td:first-child {
-      position: sticky;
-      left: 0;
-      z-index: 2;
-      text-align: left;
-    }
-
-    .table-wrap.is-scrolled thead tr:first-child th:first-child,
-    .table-wrap.is-scrolled td:first-child {
-      box-shadow: 8px 0 14px -14px rgba(24, 23, 22, 0.55);
-    }
-
-    tbody td:first-child {
-      min-width: 168px;
-      background: var(--paper);
-      font-weight: 760;
-    }
-
-    .compact-method thead tr:first-child th:first-child,
-    .compact-method tbody td:first-child {
-      width: 1%;
-      min-width: 0;
-    }
-
-    thead tr:first-child th:first-child {
-      text-align: center;
-    }
-
-    thead tr:first-child th:first-child {
-      z-index: 4;
-      background: #f1ebe1;
-    }
-
-    tbody tr:nth-child(even) {
-      background: #fbf8f1;
-    }
-
-    tbody tr:nth-child(even) td:first-child {
-      background: #fbf8f1;
-    }
-
-    tbody tr.ours {
-      background: #fff2ed;
-      font-weight: 850;
-    }
-
-    tbody tr.ours td:first-child {
-      background: #fff2ed;
-    }
-
-    tbody tr.gain {
-      color: #137065;
-      background: #eff8f4;
-      font-weight: 850;
-    }
-
-    tbody tr.gain td:first-child {
-      background: #eff8f4;
-    }
-
-    .best {
-      color: var(--accent) !important;
-      font-weight: 850;
-    }
-
-    .second {
-      color: #80520f !important;
-      font-weight: 800;
-    }
-
-    code,
-    pre {
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    }
-
-    pre {
-      overflow-x: auto;
-      margin: 0;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: #15181d;
-      color: #e9edf2;
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    .hero-code {
-      position: relative;
-      max-width: 100%;
-      margin: 22px 0 0;
-    }
-
-    .hero-code pre {
-      box-shadow: 0 14px 34px rgba(24, 23, 22, 0.14);
-      padding-right: 56px;
-    }
-
-    .copy-code {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border: 1px solid rgba(233, 237, 242, 0.18);
-      border-radius: 6px;
-      color: #d8dee8;
-      background: rgba(255, 255, 255, 0.08);
-      cursor: pointer;
-    }
-
-    .copy-code:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.14);
-    }
-
-    .copy-code svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    .copy-code .copy-check,
-    .copy-code.is-copied .copy-icon {
-      display: none;
-    }
-
-    .copy-code.is-copied {
-      color: #a7d979;
-      border-color: rgba(167, 217, 121, 0.38);
-      background: rgba(167, 217, 121, 0.12);
-    }
-
-    .copy-code.is-copied .copy-check {
-      display: block;
-    }
-
-    .code-keyword {
-      color: #ff8f6b;
-      font-weight: 750;
-    }
-
-    .code-string {
-      color: #a7d979;
-    }
-
-    .code-number {
-      color: #e7bd64;
-    }
-
-    .code-call {
-      color: #7dcfff;
-    }
-
-    .code-builtin {
-      color: #c7a6ff;
-    }
-
-    .code-comment {
-      color: #83909f;
-      font-style: italic;
-    }
-
-    .people-grid {
-      display: grid;
-      gap: 16px;
-    }
-
-    .bio-card {
-      display: grid;
-      grid-template-columns: 132px minmax(0, 1fr);
-      gap: 20px;
-      align-items: start;
-      padding: 20px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--paper);
-      box-shadow: 0 12px 34px rgba(24, 23, 22, 0.07);
-    }
-
-    .bio-card img {
-      width: 132px;
-      height: auto;
-      object-fit: contain;
-      border-radius: 4px;
-    }
-
-    .bio-card h3 {
-      margin: 0;
-      font-size: 21px;
-      line-height: 1.2;
-    }
-
-    .bio-card p {
-      margin: 10px 0 0;
+      font-size: 12px;
+      font-weight: 650;
       color: var(--muted);
-      font-size: 15px;
-      overflow-wrap: anywhere;
+      text-align: center;
+      border-bottom: 1px solid var(--line);
     }
+    thead tr:first-child th { color: var(--ink); font-size: 13px; }
+    thead th.method { text-align: left; vertical-align: bottom; }
+    tbody td { border-bottom: 1px solid #f0f1f3; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td.method { font-weight: 550; position: sticky; left: 0; background: var(--surface); }
+    tr.ours td { background: #faf9ff; }
+    tr.ours td.method { color: var(--accent); }
+    tr.ours.main td { background: var(--tint); }
+    tr.ours.main td.method { font-weight: 750; }
+    td.best { font-weight: 750; color: var(--ink); }
+    td.best::after { content: ""; display: block; height: 2px; margin-top: 2px; border-radius: 2px; background: var(--spectrum); }
+    td.na { color: var(--faint); }
+    tr.gain td { font-size: 13px; font-weight: 650; border-top: 1px solid var(--line); background: var(--surface); }
+    tr.gain td.method { color: var(--muted); font-weight: 600; }
+    td.up { color: var(--up); }
+    td.down { color: var(--down); }
+
+    .video-figure {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #05060a;
+    }
+    .video-figure video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+
+    /* citation */
+    .cite .code pre { white-space: pre; }
+
+    /* people */
+    .people { display: grid; gap: 14px; }
+    .person {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 24px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .person img { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; object-position: top; }
+    .person h3 { font-size: 20px; }
+    .person h3 a { text-decoration: none; }
+    .person h3 a:hover { color: var(--accent); }
+    .person .role { margin: 2px 0 0; font-size: 14px; color: var(--accent); font-weight: 600; }
+    .person p { margin: 10px 0 0; font-size: 15px; color: var(--muted); }
 
     footer {
-      padding: 42px 0 54px;
+      padding: 40px 0 56px;
       border-top: 1px solid var(--line);
-      color: var(--muted);
       font-size: 14px;
+      color: var(--faint);
     }
+    footer p { margin: 0 0 6px; }
 
     @media (max-width: 900px) {
-      .hero-grid,
-      .section-head,
-      .bars {
-        grid-template-columns: 1fr;
-      }
-
-      .topbar .shell {
-        align-items: flex-start;
-        flex-direction: column;
-        padding: 12px 0;
-      }
-
-      nav {
-        justify-content: flex-start;
-      }
-
-      .stats,
-      .metric-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .hero {
-        padding-top: 52px;
-      }
-
-    }
-
-    @media (max-width: 560px) {
-      .shell {
-        width: min(var(--max), calc(100% - 22px));
-      }
-
-      .topbar {
-        position: static;
-      }
-
-      nav {
-        gap: 10px;
-        font-size: 13px;
-      }
-
-      h1 {
-        font-size: clamp(46px, 18vw, 70px);
-      }
-
-      section {
-        padding: 36px 0;
-      }
-
-      .actions {
-        flex-direction: column;
-      }
-
-      .button {
-        width: 100%;
-      }
-
-      .hero {
-        padding-top: 32px;
-        padding-bottom: 28px;
-      }
-
-      .stats,
-      .metric-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .bio-card {
-        grid-template-columns: 1fr;
-        padding: 16px;
-      }
-
-      .bio-card img {
-        width: 120px;
-      }
-
-      .bar-row {
-        grid-template-columns: minmax(74px, 0.9fr) minmax(72px, 1fr) 42px;
-        gap: 8px;
-        font-size: 12px;
-      }
-
-      .table-title {
-        padding: 11px;
-        font-size: 14px;
-        line-height: 1.35;
+      .overview, .stages { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero-caption {
+        position: relative;
+        right: auto;
+        bottom: auto;
+        width: calc(100% - 40px);
+        max-width: none;
+        margin: 0 auto 76px;
         text-align: left;
       }
-
-      .hero-figure,
-      #method .figure-panel,
-      #results .figure-panel {
-        width: 100vw;
-        margin-left: calc(50% - 50vw);
-        margin-right: calc(50% - 50vw);
-        padding: 0;
-        border: 0;
-        border-radius: 0;
-        background: transparent;
-        box-shadow: none;
-      }
-
-      .hero-figure img,
-      #method .figure-panel img,
-      #results .figure-panel img {
-        width: 100%;
-        margin: 0;
-        padding: 11px;
-        border-radius: 0;
-        background: #fff;
-      }
-
-      .hero-figure .caption,
-      #method .figure-panel .caption,
-      #results .figure-panel .caption {
-        margin: 0;
-        padding-right: 11px;
-        padding-left: 11px;
-      }
-
-      pre {
-        font-size: 12px;
-        padding-left: 14px;
-      }
+      .hero-content { padding-bottom: 22px; }
+      .nav nav { display: none; }
+    }
+    @media (max-width: 560px) {
+      .wrap { width: calc(100% - 28px); }
+      .hero-caption { width: calc(100% - 28px); }
+      .stats { grid-template-columns: 1fr; }
+      .person { grid-template-columns: 1fr; gap: 14px; padding: 20px; }
+      .person img { width: 88px; height: 88px; }
+      .btn { height: 40px; padding: 0 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .scroll-cue::after { animation: none; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="shell">
+  <header class="nav" id="nav">
+    <div class="wrap">
       <a class="brand" href="#top">ViT-Up</a>
-      <nav aria-label="Primary navigation">
+      <nav aria-label="Sections">
+        <a href="#overview">Overview</a>
         <a href="#method">Method</a>
         <a href="#results">Results</a>
+        <a href="#video">Video</a>
+        <a href="#citation">Citation</a>
         <a href="#people">People</a>
       </nav>
     </div>
   </header>
 
   <main id="top">
-    <section class="hero">
-      <div class="shell hero-grid">
-        <div>
-          <h1>ViT-Up</h1>
-          <div class="authors" aria-label="Authors">
-            <a href="https://link.discuna.com/vitupkw">Krispin Wandel</a>
-            <a href="https://robotics.sjtu.edu.cn/en/minglu/465.html">Jingchuan Wang</a>
-            <a href="https://irmv.sjtu.edu.cn/wanghesheng">Hesheng Wang</a>
-          </div>
-          <p class="subtitle">Faithful Feature Upsampling for Vision Transformers</p>
-          <div id="quickstart" class="hero-code" aria-label="Quick start Python example" data-code='model = torch.hub.load(
-    "krispinwandel/vit-up",
-    "vit_up_dinov3_splus",
-    pretrained=True,
-    trust_repo=True,
-).eval()
-
-query_features = model(pixel_values, query_coords)'>
-            <button class="copy-code" type="button" aria-label="Copy Quick Start code">
-              <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="14" height="14" x="8" y="8" rx="2"/>
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-              </svg>
-              <svg class="copy-check" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m20 6-11 11-5-5"/>
-              </svg>
-            </button>
-            <pre><code>model = torch.hub.<span class="code-call">load</span>(
-    <span class="code-string">"krispinwandel/vit-up"</span>,
-    <span class="code-string">"vit_up_dinov3_splus"</span>,
-    pretrained=<span class="code-builtin">True</span>,
-    trust_repo=<span class="code-builtin">True</span>,
-).<span class="code-call">eval</span>()
-
-query_features = model(pixel_values, query_coords)</code></pre>
-          </div>
-          <div class="actions">
-            <a class="button" href="https://link.discuna.com/vitupgit" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.09.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.56 2.35 1.11 2.92.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.35 9.35 0 0 1 12 6.94c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.04 10.04 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/>
-              </svg>
-              GitHub
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h6v6"/>
-                <path d="M10 14 21 3"/>
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              </svg>
-            </a>
-            <a class="button secondary" href="https://arxiv.org/abs/2606.14024" target="_blank" rel="noopener noreferrer" aria-label="Read the paper on arXiv">
-              <img src="assets/pdf.svg" alt="" aria-hidden="true">
-              arXiv
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h6v6"/>
-                <path d="M10 14 21 3"/>
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              </svg>
-            </a>
-            <a class="button secondary" href="https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb" target="_blank" rel="noopener noreferrer" aria-label="Try in Google Colab">
-              <img src="assets/colab.svg" alt="" aria-hidden="true">
-              Try in Colab
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h6v6"/>
-                <path d="M10 14 21 3"/>
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              </svg>
-            </a>
-            <a class="button secondary" href="https://app.discuna.com/invite/krispinwandel" target="_blank" rel="noopener noreferrer" aria-label="Discuss on Discuna">
-              <img src="assets/discuna-icon.svg" alt="" aria-hidden="true">
-              Discuss on Discuna
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h6v6"/>
-                <path d="M10 14 21 3"/>
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-              </svg>
-            </a>
-          </div>
-        </div>
-        <div class="hero-media">
-          <figure class="hero-figure">
-            <img src="assets/model_overview.jpg" alt="ViT-Up model overview figure">
-            <figcaption class="caption">ViT-Up is an implicit feature upsampler for Vision Transformers that predicts backbone-aligned features at arbitrary continuous image coordinates.</figcaption>
-          </figure>
+    <section class="hero" id="hero">
+      <video autoplay muted loop playsinline preload="auto" poster="assets/vit_up_56_poster.jpg" aria-label="Dense ViT-Up features on video, visualized with PCA">
+        <source src="assets/vit_up_56.mp4" type="video/mp4">
+      </video>
+      <div class="wrap hero-content">
+        <p class="eyebrow">arXiv 2606.14024</p>
+        <h1>ViT-Up</h1>
+        <p class="tagline">Faithful Feature Upsampling for Vision Transformers</p>
+        <p class="authors">
+          <a href="https://link.discuna.com/vitupkw">Krispin Wandel</a><span class="sep">·</span><a href="https://robotics.sjtu.edu.cn/en/minglu/465.html">Jingchuan Wang</a><span class="sep">·</span><a href="https://irmv.sjtu.edu.cn/wanghesheng">Hesheng Wang</a>
+          <span class="affiliation">Shanghai Jiao Tong University</span>
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="https://arxiv.org/abs/2606.14024" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+            Paper
+          </a>
+          <a class="btn glass" href="https://link.discuna.com/vitupgit" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.09.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.56 2.35 1.11 2.92.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.35 9.35 0 0 1 12 6.94c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.04 10.04 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg>
+            Code
+          </a>
+          <a class="btn glass" href="https://huggingface.co/spaces/Krispin/vit-up" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 4 14 8-14 8z"/></svg>
+            Demo
+          </a>
+          <a class="btn glass" href="https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb" target="_blank" rel="noopener noreferrer">
+            <img src="assets/colab.svg" alt="" aria-hidden="true">
+            Colab
+          </a>
+          <a class="btn glass" href="https://huggingface.co/Krispin/vit-up" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>
+            Models
+          </a>
+          <a class="btn glass" href="https://app.discuna.com/invite/krispinwandel" target="_blank" rel="noopener noreferrer">
+            <img src="assets/discuna-icon.svg" alt="" aria-hidden="true">
+            Discuss
+          </a>
         </div>
       </div>
+      <p class="hero-caption"><strong>Dense ViT-Up features on video.</strong> DINOv3-S+ with a 56×56 backbone grid, queried at every pixel of each frame and projected to RGB with one PCA per clip.</p>
+      <a class="scroll-cue" href="#overview" aria-label="Scroll to overview"></a>
+    </section>
 
-      <div class="shell stats" aria-label="Result highlights">
-        <div class="stat"><strong>65.41</strong><span>Cityscapes mIoU</span><em>+2.07 vs. best baseline</em></div>
-        <div class="stat"><strong>55.44</strong><span>SPair-71k PCK@0.10</span><em>+4.17 vs. best baseline</em></div>
-        <div class="stat"><strong>62.72</strong><span>COCO depth &delta;1</span><em>+0.55 vs. best baseline</em></div>
-        <div class="stat"><strong>80.81</strong><span>NAVI PCK@0.10</span><em>+0.50 vs. best baseline</em></div>
+    <section class="block" id="overview">
+      <div class="wrap">
+        <div class="overview">
+          <div>
+            <p class="kicker">Overview</p>
+            <h2>Backbone features at any image coordinate.</h2>
+            <p style="margin-top: 22px;">ViT-Up is an implicit feature upsampler for Vision Transformers. It predicts backbone-aligned features at arbitrary continuous image coordinates, decoding them from the backbone's intermediate hidden states rather than from an external guidance image. This avoids the feature leakage between visually similar regions that image-guided upsamplers show.</p>
+            <p>ViT-Up is pretrained once by self-supervised feature distillation on ImageNet-1K. Downstream heads then operate directly on dense DINOv3 or DINOv2 features, improving data-constrained dense prediction, fine-grained correspondence and video object segmentation.</p>
+          </div>
+          <div class="code" id="quickstart">
+            <div class="code-bar"><span>Quick start · Python</span><button class="copy" type="button" data-copy="quickstart-code">Copy</button></div>
+<pre id="quickstart-code"><span class="k">import</span> torch
+<span class="k">from</span> PIL <span class="k">import</span> Image
+
+model = torch.hub.<span class="f">load</span>(
+    <span class="s">"krispinwandel/vit-up"</span>,
+    <span class="s">"vit_up_dinov3_splus"</span>,
+    trust_repo=<span class="k">True</span>,
+)
+
+<span class="c"># 1. Encode the image once.</span>
+model.<span class="f">set_images</span>(Image.<span class="f">open</span>(<span class="s">"image.png"</span>).<span class="f">convert</span>(<span class="s">"RGB"</span>))
+
+<span class="c"># 2. Query features at any (x, y) in [0, 1].</span>
+points = torch.<span class="f">tensor</span>([[[<span class="n">0.25</span>, <span class="n">0.50</span>], [<span class="n">0.70</span>, <span class="n">0.33</span>]]])
+features = <span class="f">model</span>(query_coords=points)     <span class="c"># (B, N, C)</span>
+
+<span class="c"># ...or on a dense grid at any resolution.</span>
+dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span>)      <span class="c"># (B, 896, 896, C)</span></pre>
+          </div>
+        </div>
+
+        <div class="stats" aria-label="Result highlights">
+          <div class="stat"><div class="value">41.18<span class="delta">+6.20</span></div><div class="what">SPair-71k PCK@0.05</div><div class="ctx">DINOv3-S+, vs. best baseline</div></div>
+          <div class="stat"><div class="value">66.42<span class="delta">+3.08</span></div><div class="what">Cityscapes mIoU</div><div class="ctx">DINOv3-S+ linear probe</div></div>
+          <div class="stat"><div class="value">73.1<span class="delta">+5.7</span></div><div class="what">DAVIS-2017 k-NN J&amp;F</div><div class="ctx">DINOv3-S+, vs. best baseline</div></div>
+          <div class="stat"><div class="value">76.0<span class="delta">+2.1</span></div><div class="what">DAVIS-2017 k-NN J&amp;F</div><div class="ctx">DINOv2-S, vs. LILA</div></div>
+        </div>
       </div>
     </section>
 
-    <section id="method">
-      <div class="shell">
-        <div class="section-head stacked">
-          <h2>Method</h2>
-          <p>ViT-Up builds query features from intermediate ViT hidden states, reducing feature leakage while preserving alignment with the backbone feature space.</p>
+    <section class="block" id="method">
+      <div class="wrap">
+        <div class="head">
+          <p class="kicker">Method</p>
+          <h2>Query features from inside the backbone.</h2>
+          <p class="lead">ViT-Up builds query features from intermediate ViT hidden states, which keeps them aligned with the backbone feature space while recovering sub-token detail.</p>
         </div>
-        <figure class="figure-panel">
-          <img src="assets/architecture.jpg" alt="ViT-Up architecture diagram">
-          <figcaption class="caption">Training uses frozen multi-resolution ViT teacher features to supervise the student model; query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
+        <figure>
+          <div class="frame pad"><img src="assets/architecture.jpg" alt="ViT-Up architecture diagram" loading="lazy"></div>
+          <figcaption>Frozen multi-resolution ViT teacher features supervise the student. Query embeddings are refined through ViT-Up blocks that combine token-level cross-attention with sub-token FeatX modulation.</figcaption>
         </figure>
-      </div>
-    </section>
-
-    <section id="results">
-      <div class="shell">
-        <div class="section-head stacked">
-          <h2>Result Highlights</h2>
-          <p>Across dense prediction and correspondence benchmarks, ViT-Up consistently improves over state-of-the-art image-guided upsamplers, with gains up to +2.07 mIoU on Cityscapes and +4.17 PCK@0.10 on SPair-71k using DINOv3-S+.</p>
-        </div>
-
-        <div class="metric-grid">
-          <div class="metric">
-            <div class="label">Best semantic segmentation gain</div>
-            <div class="value">+2.07</div>
-            <div class="note">Cityscapes mIoU</div>
-          </div>
-          <div class="metric">
-            <div class="label">Best depth improvement</div>
-            <div class="value">+1.33</div>
-            <div class="note">COCO RMSE reduction</div>
-          </div>
-          <div class="metric">
-            <div class="label">Best semantic correspondence gain</div>
-            <div class="value">+5.11</div>
-            <div class="note">SPair-71k PCK@0.05</div>
-          </div>
-          <div class="metric">
-            <div class="label">Best geometric correspondence gain</div>
-            <div class="value">+0.50</div>
-            <div class="note">NAVI PCK@0.10</div>
-          </div>
-        </div>
-
-        <div class="bars" aria-label="Gain visualization">
-          <article class="bar-panel">
-            <h3>Probing gains vs. best baseline</h3>
-            <div class="bar-row"><span>COCO mIoU</span><div class="track"><span class="fill" style="width: 11%"></span></div><span>+0.23</span></div>
-            <div class="bar-row"><span>VOC mIoU</span><div class="track"><span class="fill" style="width: 79%"></span></div><span>+1.63</span></div>
-            <div class="bar-row"><span>ADE mIoU</span><div class="track"><span class="fill" style="width: 24%"></span></div><span>+0.49</span></div>
-            <div class="bar-row"><span>City mIoU</span><div class="track"><span class="fill" style="width: 100%"></span></div><span>+2.07</span></div>
-            <div class="bar-row"><span>Depth d1</span><div class="track"><span class="fill" style="width: 27%"></span></div><span>+0.55</span></div>
-            <div class="bar-row"><span>Depth RMSE</span><div class="track"><span class="fill" style="width: 64%"></span></div><span>+1.33</span></div>
-          </article>
-          <article class="bar-panel">
-            <h3>Correspondence gains vs. best baseline</h3>
-            <div class="bar-row"><span>SPair .10</span><div class="track"><span class="fill teal" style="width: 82%"></span></div><span>+4.17</span></div>
-            <div class="bar-row"><span>SPair .05</span><div class="track"><span class="fill teal" style="width: 100%"></span></div><span>+5.11</span></div>
-            <div class="bar-row"><span>SPair .01</span><div class="track"><span class="fill teal" style="width: 68%"></span></div><span>+3.47</span></div>
-            <div class="bar-row"><span>NAVI .10</span><div class="track"><span class="fill teal" style="width: 10%"></span></div><span>+0.50</span></div>
-            <div class="bar-row"><span>NAVI .05</span><div class="track"><span class="fill teal" style="width: 8%"></span></div><span>+0.41</span></div>
-            <div class="bar-row"><span>NAVI .01</span><div class="track"><span class="fill teal" style="width: 5%"></span></div><span>+0.25</span></div>
-          </article>
-        </div>
-
-        <div class="result-subsections">
-          <article class="result-subsection" id="qualitative-analysis">
-            <h3>Qualitative Analysis</h3>
-            <figure class="figure-panel">
-              <img src="assets/attn.jpg" alt="Qualitative comparison of feature upsampling methods on DINOv3-S+">
-              <figcaption class="caption">Qualitative comparison of feature upsampling methods on DINOv3-S+. All methods use a 448 x 448 input image; the native backbone produces a 28 x 28 feature grid, and upsampled feature maps are shown at 448 x 448 output resolution. We show two examples: a vegetable-store scene in the top two rows and a traffic scene in the bottom two rows. For each example, the top row visualizes the feature structure using PCA, including the input image, the original 28 x 28 backbone feature map, and the upsampled feature maps produced by ViT-Up, NAF, UpLiFT, AnyUp, and JAFAR. The bottom row shows the corresponding query-based similarity maps, including the input image with the query point encircled in blue, the similarity map obtained from the low-resolution backbone features, and the similarity maps obtained from the upsampled features of each method. ViT-Up produces coherent PCA structures and semantically selective similarity maps that remain aligned with the queried region. In contrast, NAF, AnyUp, and JAFAR can produce visually sharp but fragmented feature maps with leakage into nearby structures, while UpLiFT tends to produce smoother features and weaker similarity responses for small semantic regions.</figcaption>
-            </figure>
-          </article>
-
-          <article class="result-subsection" id="dense-probing">
-            <h3>Dense Probing</h3>
-            <figure class="figure-panel">
-              <img src="assets/probing.jpg" alt="Qualitative dense probing results on DINOv3-S+">
-              <figcaption class="caption">Qualitative dense probing results on DINOv3-S+. All methods use a 448 x 448 input image; the native backbone produces a 28 x 28 feature grid, and dense predictions are shown at 448 x 448 output resolution. Top two rows: semantic segmentation example with a person in front of a bus, showing PCA projections of the dense features and the corresponding predicted segmentation masks together with the ground-truth mask on the left. Bottom two rows: monocular depth example with a group of ducks, showing PCA projections of the dense features and the corresponding predicted depth maps together with the pseudo-depth target on the left generated by Depth Anything V2. For the bilinear baseline, we visualize PCA on the original 28 x 28 backbone feature grid. NAF, AnyUp, and JAFAR produce visually sharp but fragmented feature maps and noisy dense predictions. UpLiFT produces more localized but blurrier features, weakening fine structures such as the person's head region and small distant ducks. ViT-Up produces more coherent dense features, resulting in cleaner segmentation masks and more consistent depth estimates.</figcaption>
-            </figure>
-            <div class="table-block" aria-label="Probing results table">
-              <p class="table-title">Probing results on DINOv3-S+. Higher is better for mIoU, accuracy, and delta1; lower is better for RMSE.</p>
-              <div class="table-wrap">
-                <table>
-                <thead>
-                  <tr>
-                    <th rowspan="2">Method</th>
-                    <th colspan="2">COCO Seg.</th>
-                    <th colspan="2">VOC</th>
-                    <th colspan="2">ADE20K</th>
-                    <th colspan="2">Cityscapes</th>
-                    <th colspan="2">COCO Depth</th>
-                  </tr>
-                  <tr>
-                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                    <th>mIoU &uarr;</th><th>Acc &uarr;</th>
-                    <th>&delta;1 &uarr;</th><th>RMSE &darr;</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Bilinear</td><td>63.10</td><td>81.85</td><td>84.88</td><td>96.45</td><td>43.27</td><td>76.17</td><td>61.36</td><td>93.44</td><td>61.52</td><td>62.80</td></tr>
-                  <tr><td>JAFAR</td><td>62.50</td><td>81.50</td><td>83.88</td><td>96.16</td><td>42.48</td><td>75.81</td><td>57.78</td><td>92.47</td><td>60.64</td><td>64.92</td></tr>
-                  <tr><td>AnyUp</td><td>63.03</td><td>81.83</td><td>84.54</td><td>96.34</td><td>42.77</td><td>76.02</td><td>58.96</td><td>92.93</td><td>61.66</td><td>62.62</td></tr>
-                  <tr><td>UpLiFT</td><td>63.79</td><td>82.28</td><td>85.69</td><td class="second">96.72</td><td class="second">44.24</td><td class="second">76.71</td><td>63.08</td><td>93.94</td><td>61.84</td><td>61.79</td></tr>
-                  <tr><td>NAF</td><td class="second">63.86</td><td class="second">82.33</td><td class="second">85.84</td><td class="second">96.72</td><td>44.17</td><td>76.69</td><td class="second">63.34</td><td class="second">94.13</td><td class="second">62.17</td><td class="second">61.15</td></tr>
-                  <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">64.09</td><td class="best">82.49</td><td class="best">87.47</td><td class="best">97.14</td><td class="best">44.73</td><td class="best">77.06</td><td class="best">65.41</td><td class="best">94.73</td><td class="best">62.72</td><td class="best">59.82</td></tr>
-                  <tr class="gain"><td>Gain vs. best baseline</td><td>+0.23</td><td>+0.16</td><td>+1.63</td><td>+0.42</td><td>+0.49</td><td>+0.35</td><td>+2.07</td><td>+0.60</td><td>+0.55</td><td>+1.33</td></tr>
-                </tbody>
-                </table>
-              </div>
-            </div>
-          </article>
-
-          <article class="result-subsection" id="correspondence">
-            <h3>Correspondence</h3>
-            <figure class="figure-panel">
-              <img src="assets/matching.jpg" alt="Qualitative semantic correspondence results on SPair-71k">
-              <figcaption class="caption">Qualitative semantic correspondence results on SPair-71k. We show two image pairs, birds in the top two rows and horses in the bottom two rows. For each pair, the first row shows PCA projections of the dense features, and the second row shows correspondences obtained by matching each source query point to the target location with maximum cosine similarity. Green lines indicate correct matches under the SPair-71k threshold, while red lines indicate incorrect matches. ViT-Up produces fine-grained object features and accurate part-level correspondences. NAF and UpLiFT suffer from feature fragmentation or blurring in small structures such as the bird tail and the partially occluded horse tail, leading to incorrect matches.</figcaption>
-            </figure>
-            <div class="table-block" aria-label="Correspondence results table">
-              <p class="table-title">Correspondence results on DINOv3-S+. PCK is reported at different tolerance thresholds; higher is better for all metrics.</p>
-              <div class="table-wrap compact-method">
-                <table>
-                <thead>
-                  <tr>
-                    <th rowspan="2">Method</th>
-                    <th colspan="3">SPair-71k</th>
-                    <th colspan="3">NAVI</th>
-                  </tr>
-                  <tr>
-                    <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
-                    <th>0.10 &uarr;</th><th>0.05 &uarr;</th><th>0.01 &uarr;</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Bilinear</td><td class="second">51.27</td><td>33.74</td><td class="second">3.83</td><td>80.16</td><td class="second">51.18</td><td class="second">33.58</td></tr>
-                  <tr><td>JAFAR</td><td>36.82</td><td>18.59</td><td>1.89</td><td>79.04</td><td>47.02</td><td>26.60</td></tr>
-                  <tr><td>AnyUp</td><td>37.63</td><td>19.31</td><td>1.97</td><td class="second">80.31</td><td>48.78</td><td>28.37</td></tr>
-                  <tr><td>UpLiFT</td><td>46.87</td><td>29.15</td><td>3.43</td><td>79.35</td><td>49.05</td><td>30.49</td></tr>
-                  <tr><td>NAF</td><td>48.68</td><td class="second">33.96</td><td>2.89</td><td>80.03</td><td>50.29</td><td>31.62</td></tr>
-                  <tr class="ours"><td>ViT-Up (Ours)</td><td class="best">55.44</td><td class="best">39.07</td><td class="best">7.30</td><td class="best">80.81</td><td class="best">51.59</td><td class="best">33.83</td></tr>
-                  <tr class="gain"><td>Gain vs. best baseline</td><td>+4.17</td><td>+5.11</td><td>+3.47</td><td>+0.50</td><td>+0.41</td><td>+0.25</td></tr>
-                </tbody>
-                </table>
-              </div>
-            </div>
-          </article>
+        <div class="stages">
+          <div class="stage"><span class="tag">Stage 1</span><p>Distills the frozen backbone into ViT-Up while training LoRA adapters of the backbone.</p></div>
+          <div class="stage"><span class="tag">Stage 2</span><p>Refines the model by self-distillation from the frozen Stage 1 model, with the adapters merged into the backbone.</p></div>
         </div>
       </div>
     </section>
 
-    <section id="people">
-      <div class="shell">
-        <div class="section-head stacked">
-          <h2>People</h2>
+    <section class="block" id="results">
+      <div class="wrap">
+        <div class="head">
+          <p class="kicker">Results</p>
+          <h2>Sharper features, without leakage.</h2>
+          <p class="lead">On DINOv3-S+, ViT-Up improves over image-guided upsamplers across dense probing, semantic and geometric correspondence, and video object segmentation.</p>
         </div>
-        <div class="people-grid">
-          <article class="bio-card">
-            <img src="assets/krispin.png" alt="Krispin Wandel">
+
+        <article class="result" id="qualitative">
+          <div class="head"><h3>Qualitative comparison</h3><p>PCA of the dense features (top rows) and similarity to a query point (bottom rows) on a 448×448 input with a native 28×28 backbone grid. ViT-Up gives coherent structure and selective similarity maps; NAF, AnyUp and JAFAR look sharp but fragment and leak into nearby structures, and UpLiFT is smoother but weaker on small regions.</p></div>
+          <figure><div class="frame"><img src="assets/attn.jpg" alt="Qualitative comparison of feature upsampling methods on DINOv3-S+" loading="lazy"></div></figure>
+        </article>
+
+        <article class="result" id="probing">
+          <div class="head"><h3>Dense linear probing</h3><p>Linear segmentation and depth heads trained on the upsampled DINOv3-S+ features. All metrics ×100.</p></div>
+          <div class="table-card">
+<div class="table-scroll"><table>
+<thead>
+<tr><th rowspan="2" class="method">Method</th>
+<th colspan="2">COCO</th>
+<th colspan="2">VOC</th>
+<th colspan="2">ADE20K</th>
+<th colspan="2">Cityscapes</th>
+<th colspan="2">COCO depth</th>
+</tr>
+<tr>
+<th>mIoU ↑</th>
+<th>Acc ↑</th>
+<th>mIoU ↑</th>
+<th>Acc ↑</th>
+<th>mIoU ↑</th>
+<th>Acc ↑</th>
+<th>mIoU ↑</th>
+<th>Acc ↑</th>
+<th>δ<sub>1</sub> ↑</th>
+<th>RMSE ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="method">Bilinear</td><td>63.10</td><td>81.85</td><td>84.88</td><td>96.45</td><td>43.27</td><td>76.17</td><td>61.36</td><td>93.44</td><td>61.39</td><td>63.01</td></tr>
+<tr><td class="method">DPT</td><td>61.74</td><td>81.40</td><td>84.64</td><td>96.46</td><td>41.95</td><td>75.70</td><td>61.89</td><td>94.13</td><td>59.83</td><td>64.36</td></tr>
+<tr><td class="method">JAFAR</td><td>62.50</td><td>81.50</td><td>83.88</td><td>96.16</td><td>42.48</td><td>75.81</td><td>57.78</td><td>92.47</td><td>60.98</td><td>64.35</td></tr>
+<tr><td class="method">AnyUp</td><td>63.03</td><td>81.83</td><td>84.54</td><td>96.34</td><td>42.77</td><td>76.02</td><td>58.96</td><td>92.93</td><td>61.56</td><td>62.54</td></tr>
+<tr><td class="method">UpLiFT</td><td>63.79</td><td>82.28</td><td>85.69</td><td>96.72</td><td>44.24</td><td>76.71</td><td>63.08</td><td>93.94</td><td>61.90</td><td>61.32</td></tr>
+<tr><td class="method">NAF</td><td>63.86</td><td>82.33</td><td>85.84</td><td>96.72</td><td>44.17</td><td>76.69</td><td>63.34</td><td>94.13</td><td>62.28</td><td>60.69</td></tr>
+<tr class="ours"><td class="method">ViT-Up w/o LoRA</td><td>64.06</td><td>82.47</td><td>86.97</td><td>97.02</td><td class="best">45.10</td><td>77.00</td><td>66.27</td><td>94.84</td><td>62.57</td><td>59.91</td></tr>
+<tr class="ours"><td class="method">ViT-Up + LoRA</td><td>64.08</td><td>82.48</td><td>87.45</td><td>97.13</td><td>44.78</td><td>77.12</td><td>65.44</td><td>94.76</td><td>63.12</td><td>59.19</td></tr>
+<tr class="ours main"><td class="method">ViT-Up + Stage 2</td><td class="best">64.24</td><td class="best">82.59</td><td class="best">87.59</td><td class="best">97.17</td><td>45.00</td><td class="best">77.32</td><td class="best">66.42</td><td class="best">95.14</td><td class="best">63.35</td><td class="best">58.48</td></tr>
+<tr class="gain"><td class="method">Stage 2 vs. best baseline</td><td class="up">+0.38</td><td class="up">+0.26</td><td class="up">+1.75</td><td class="up">+0.45</td><td class="up">+0.76</td><td class="up">+0.61</td><td class="up">+3.08</td><td class="up">+1.01</td><td class="up">+1.07</td><td class="up">+2.21</td></tr>
+</tbody>
+</table></div>
+            <p class="note">Best per column underlined. ViT-Up + LoRA and + Stage 2 are the released <code>dinov3_splus_stage1</code> and <code>dinov3_splus</code> models.</p>
+          </div>
+          <figure>
+            <div class="frame"><img src="assets/probing.jpg" alt="Qualitative dense probing results on DINOv3-S+" loading="lazy"></div>
+            <figcaption>Segmentation (top) and depth (bottom) predictions with PCA of the dense features. ViT-Up gives cleaner masks and more consistent depth, including fine structures such as the person's head and the small distant ducks.</figcaption>
+          </figure>
+        </article>
+
+        <article class="result" id="correspondence">
+          <div class="head"><h3>Correspondence</h3><p>Semantic correspondence on SPair-71k (PCK at three thresholds) and geometric correspondence on NAVI (3D recall at three distances), DINOv3-S+.</p></div>
+          <div class="table-card">
+<div class="table-scroll"><table>
+<thead>
+<tr><th rowspan="2" class="method">Method</th>
+<th colspan="3">SPair-71k PCK</th>
+<th colspan="3">NAVI recall</th>
+</tr>
+<tr>
+<th>0.10 ↑</th>
+<th>0.05 ↑</th>
+<th>0.01 ↑</th>
+<th>5 cm ↑</th>
+<th>2 cm ↑</th>
+<th>1 cm ↑</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="method">Bilinear</td><td>51.27</td><td>33.74</td><td>3.83</td><td>80.16</td><td>51.18</td><td>33.58</td></tr>
+<tr><td class="method">DPT</td><td>50.86</td><td>34.98</td><td>6.75</td><td>79.53</td><td>51.49</td><td>34.33</td></tr>
+<tr><td class="method">JAFAR</td><td>36.82</td><td>18.59</td><td>1.89</td><td>79.04</td><td>47.02</td><td>26.60</td></tr>
+<tr><td class="method">AnyUp</td><td>37.63</td><td>19.31</td><td>1.97</td><td>80.31</td><td>48.78</td><td>28.37</td></tr>
+<tr><td class="method">UpLiFT</td><td>46.87</td><td>29.15</td><td>3.43</td><td>79.35</td><td>49.05</td><td>30.49</td></tr>
+<tr><td class="method">NAF</td><td>48.68</td><td>33.96</td><td>2.89</td><td>80.03</td><td>50.29</td><td>31.62</td></tr>
+<tr class="ours"><td class="method">ViT-Up w/o LoRA</td><td>55.46</td><td>39.28</td><td>7.38</td><td class="best">81.12</td><td class="best">53.72</td><td class="best">36.39</td></tr>
+<tr class="ours"><td class="method">ViT-Up + LoRA</td><td>55.60</td><td>39.43</td><td>7.75</td><td>80.67</td><td>53.21</td><td>35.93</td></tr>
+<tr class="ours main"><td class="method">ViT-Up + Stage 2</td><td class="best">56.39</td><td class="best">41.18</td><td class="best">8.98</td><td>80.10</td><td>52.32</td><td>35.51</td></tr>
+<tr class="gain"><td class="method">Stage 2 vs. best baseline</td><td class="up">+5.12</td><td class="up">+6.20</td><td class="up">+2.23</td><td class="down">−0.21</td><td class="up">+0.83</td><td class="up">+1.18</td></tr>
+</tbody>
+</table></div>
+            <p class="note">Best per column underlined.</p>
+          </div>
+          <figure>
+            <div class="frame"><img src="assets/matching.jpg" alt="Qualitative semantic correspondence results on SPair-71k" loading="lazy"></div>
+            <figcaption>Nearest-neighbor matches on SPair-71k (green: correct, red: incorrect). ViT-Up keeps part-level detail such as the bird tail and the partially occluded horse tail, where NAF and UpLiFT fragment or blur.</figcaption>
+          </figure>
+        </article>
+
+        <article class="result" id="video">
+          <div class="head"><h3>Video object segmentation</h3><p>DAVIS-2017 J&amp;F with LILA's linear-probing and k-NN propagation protocols, using only each method's dense features. ViT-Up learns only from still ImageNet-1K images, yet outperforms LILA, which trains on videos with optical-flow and depth supervision.</p></div>
+          <div class="table-card">
+<div class="table-scroll"><table>
+<thead>
+<tr><th rowspan="2" class="method">Method</th>
+<th colspan="2">DINOv2-S</th>
+<th colspan="2">DINOv3-S+</th>
+</tr>
+<tr>
+<th>Probing ↑</th>
+<th>k-NN ↑</th>
+<th>Probing ↑</th>
+<th>k-NN ↑</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="method">Bilinear</td><td>58.6</td><td>62.2</td><td>63.7</td><td>63.3</td></tr>
+<tr><td class="method">LILA</td><td>64.5</td><td>73.9</td><td class="na">–</td><td class="na">–</td></tr>
+<tr><td class="method">NAF</td><td>62.6</td><td>65.9</td><td>63.9</td><td>62.8</td></tr>
+<tr><td class="method">UpLiFT</td><td>65.1</td><td>69.9</td><td>66.0</td><td>67.4</td></tr>
+<tr class="ours main"><td class="method">ViT-Up</td><td class="best">67.3</td><td class="best">76.0</td><td class="best">69.5</td><td class="best">73.1</td></tr>
+<tr class="gain"><td class="method">ViT-Up vs. best baseline</td><td class="up">+2.2</td><td class="up">+2.1</td><td class="up">+3.5</td><td class="up">+5.7</td></tr>
+</tbody>
+</table></div>
+            <p class="note">ViT-Up is the Stage 2 model trained jointly on two backbone grids (<code>dinov2_small_g32_64</code>, <code>dinov3_splus_g28_56</code>). LILA uses its official DINOv2-S checkpoint. Linear probing is the mean over 10 seeds.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="block cite" id="citation">
+      <div class="wrap">
+        <div class="head"><p class="kicker">Citation</p><h2>BibTeX</h2></div>
+        <div class="code">
+          <div class="code-bar"><span>BibTeX</span><button class="copy" type="button" data-copy="bibtex">Copy</button></div>
+<pre id="bibtex">@misc{wandel2026vitupfaithfulfeatureupsampling,
+      title={ViT-Up: Faithful Feature Upsampling for Vision Transformers},
+      author={Krispin Wandel and Jingchuan Wang and Hesheng Wang},
+      year={2026},
+      eprint={2606.14024},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2606.14024},
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="people">
+      <div class="wrap">
+        <div class="head"><p class="kicker">People</p><h2>Authors</h2></div>
+        <div class="people">
+          <article class="person">
+            <img src="assets/krispin.png" alt="Krispin Wandel" loading="lazy">
             <div>
               <h3><a href="https://link.discuna.com/vitupkw">Krispin Wandel</a></h3>
+              <p class="role">Ph.D. student, Shanghai Jiao Tong University</p>
               <p>Krispin Wandel received the M.Sc. degree in computational science and engineering from ETH Zurich, Zurich, Switzerland. He is currently pursuing the Ph.D. degree with the Department of Automation, Shanghai Jiao Tong University, Shanghai, China, under the supervision of Prof. Hesheng Wang. His research interests include visual representation learning, dense prediction, semantic correspondence, and robotics.</p>
             </div>
           </article>
-          <article class="bio-card">
-            <img src="assets/jingchuan.png" alt="Jingchuan Wang">
+          <article class="person">
+            <img src="assets/jingchuan.png" alt="Jingchuan Wang" loading="lazy">
             <div>
               <h3><a href="https://robotics.sjtu.edu.cn/en/minglu/465.html">Jingchuan Wang</a></h3>
+              <p class="role">Professor, Shanghai Jiao Tong University</p>
               <p>Jingchuan Wang received the Ph.D., M.Phil. and B.Eng. degree in Control Theory and Control Engineering from the Shanghai Jiao Tong University (SJTU), Shanghai, China, in 2002, 2005 and 2014, respectively. Now, he is a Professor in the School of Automation and Intelligent Sensing, and Institute of Medical Robotics at SJTU. He is also an IEEE senior member. His research interests include service robot, mobile robot's localization and navigation.</p>
             </div>
           </article>
-          <article class="bio-card">
-            <img src="assets/hesheng.png" alt="Hesheng Wang">
+          <article class="person">
+            <img src="assets/hesheng.png" alt="Hesheng Wang" loading="lazy">
             <div>
               <h3><a href="https://irmv.sjtu.edu.cn/wanghesheng">Hesheng Wang</a></h3>
+              <p class="role">Distinguished Professor, Shanghai Jiao Tong University</p>
               <p>Hesheng Wang (Senior Member, IEEE) received the B.Eng. degree in electrical engineering from the Harbin Institute of Technology, Harbin, China, in 2002, and the M.Phil. and Ph.D. degrees in automation and computer-aided engineering from the Chinese University of Hong Kong, Hong Kong, in 2004 and 2007, respectively. He is currently a Distinguished Professor with the School of Automation and Intelligent Sensing, Shanghai Jiao Tong University, Shanghai, China. His research interests include visual servoing, intelligent robotics, computer vision, and autonomous driving. Dr. Wang is an Associate Editor of Robotic Intelligence and Automation and the International Journal of Humanoid Robotics, a Senior Editor of the IEEE/ASME Transactions on Mechatronics, and Editor-in-Chief of Robot Learning. He served as an Associate Editor of IEEE Transactions on Robotics from 2015 to 2019 and IEEE Transactions on Automation Science and Engineering from 2021 to 2023. He was the General Chair of IEEE/RSJ IROS 2025, IEEE ROBIO 2022, and IEEE RCAR 2016.</p>
             </div>
           </article>
         </div>
       </div>
     </section>
-
   </main>
 
   <footer>
-    <div class="shell">
-      <span>ViT-Up: Faithful Feature Upsampling for Vision Transformers.</span>
-      <span> Code: <a href="https://link.discuna.com/vitupgit">https://link.discuna.com/vitupgit</a>.</span>
-      <span> This work was supported in part by the National Natural Science Foundation of China under Grants 62225309, U24A20278, and 62361166632.</span>
+    <div class="wrap">
+      <p>ViT-Up: Faithful Feature Upsampling for Vision Transformers · <a href="https://link.discuna.com/vitupgit">Code</a> · <a href="https://arxiv.org/abs/2606.14024">arXiv</a></p>
+      <p>This work was supported in part by the National Natural Science Foundation of China under Grants 62225309, U24A20278, and 62361166632.</p>
     </div>
   </footer>
+
   <script>
-    document.querySelectorAll(".copy-code").forEach((button) => {
-      const showCopied = () => {
-        button.classList.add("is-copied");
-        button.setAttribute("aria-label", "Copied");
-        window.setTimeout(() => {
-          button.classList.remove("is-copied");
-          button.setAttribute("aria-label", "Copy Quick Start code");
-        }, 1400);
-      };
+    // Solid navigation once the hero is scrolled past.
+    const nav = document.getElementById("nav");
+    const hero = document.getElementById("hero");
+    new IntersectionObserver(([entry]) => nav.classList.toggle("solid", !entry.isIntersecting),
+      { rootMargin: "-64px 0px 0px 0px" }).observe(hero);
 
+    // Respect reduced motion: show the poster frame instead of playing.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.querySelectorAll("video[autoplay]").forEach((video) => { video.removeAttribute("autoplay"); video.pause(); });
+    }
+
+    // Copy buttons.
+    document.querySelectorAll(".copy").forEach((button) => {
       button.addEventListener("click", async () => {
-        const block = button.closest(".hero-code");
-        const code = block?.dataset.code;
-        if (!code) return;
-
+        const text = document.getElementById(button.dataset.copy).innerText;
         try {
-          await navigator.clipboard.writeText(code);
-          showCopied();
+          await navigator.clipboard.writeText(text);
         } catch {
-          const area = document.createElement("textarea");
-          area.value = code;
-          area.setAttribute("readonly", "");
-          area.style.position = "fixed";
-          area.style.opacity = "0";
+          const area = Object.assign(document.createElement("textarea"), { value: text });
+          area.style.cssText = "position:fixed;opacity:0";
           document.body.appendChild(area);
           area.select();
-          const copied = document.execCommand("copy");
+          document.execCommand("copy");
           area.remove();
-          if (copied) showCopied();
         }
+        button.textContent = "Copied";
+        button.classList.add("done");
+        setTimeout(() => { button.textContent = "Copy"; button.classList.remove("done"); }, 1400);
       });
-    });
-
-    document.querySelectorAll(".table-wrap").forEach((wrap) => {
-      const updateScrollState = () => {
-        wrap.classList.toggle("is-scrolled", wrap.scrollLeft > 0);
-      };
-
-      updateScrollState();
-      wrap.addEventListener("scroll", updateScrollState, { passive: true });
     });
   </script>
 </body>
