@@ -548,7 +548,7 @@
             <h2>Overview</h2>
             <p style="margin-top: 22px;">Image-guided feature upsamplers produce visually sharp features, but their shallow image encoders can introduce feature leakage, fragmentation and blur.</p>
             <p>ViT-Up is an implicit feature upsampler for Vision Transformers that builds its queries from intermediate ViT hidden states instead. It predicts features at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
-            <p>On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in Cityscapes linear probing, +5.12 PCK@0.10 in SPair-71k semantic correspondence and +5.7 J&amp;F in DAVIS-2017 video object segmentation with k-NN label propagation.</p>
+            <p>On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k and +5.7 J&amp;F in video object segmentation on DAVIS-2017 (k-NN label propagation).</p>
           </div>
           <div class="code" id="quickstart">
             <div class="code-bar"><span>Quick start · Python</span><button class="copy" type="button" data-copy="quickstart-code">Copy</button></div>
