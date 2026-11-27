@@ -309,6 +309,7 @@
       gap: 14px;
     }
     .stats-note { margin: 12px 0 0; font-size: 13px; color: var(--faint); }
+    .stats-lead { margin: 0 0 22px; max-width: 860px; font-size: 17px; color: #2b303a; }
     .stat {
       position: relative;
       padding: 22px 22px 20px;
@@ -550,7 +551,6 @@
             <p style="margin-top: 22px;">Vision Transformers (ViTs) have become a dominant architecture for visual representation learning. However, the quadratic cost of global self-attention limits them to coarse patch-token grids, whereas dense prediction and fine-grained semantic correspondence require much higher resolution.</p>
             <p>Task-agnostic feature upsamplers aim to close this gap. While current state-of-the-art methods produce visually sharp features, their shallow guidance encoders can introduce feature leakage, fragmentation and blur.</p>
             <p>ViT-Up instead builds its queries from the ViT's own intermediate hidden states. This enables feature prediction at arbitrary continuous image coordinates while preserving alignment with the backbone feature space.</p>
-            <p>On DINOv3-S+, it improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k, and +5.7 J&amp;F in video object segmentation on DAVIS-2017. With DINOv3-B, the first two gains grow to +3.47 mIoU and +8.79 PCK@0.10. In video object segmentation on DINOv2-S, ViT-Up even outperforms LILA by +2.1 J&amp;F, although LILA trains on videos with optical-flow and depth supervision while ViT-Up learns only from still images.</p>
           </div>
           <div class="code" id="quickstart">
             <div class="code-bar"><span>Quick start · Python</span><button class="copy" type="button" data-copy="quickstart-code">Copy</button></div>
@@ -576,11 +576,12 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
         </div>
 
         <h3 class="stats-title">Result highlights</h3>
+        <p class="stats-lead">On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k, and +5.7 J&amp;F in video object segmentation on DAVIS-2017. With DINOv3-B, the first two gains grow to +3.47 mIoU and +8.79 PCK@0.10. In video object segmentation on DINOv2-S, ViT-Up even outperforms LILA by +2.1 J&amp;F, although LILA trains on videos with optical-flow and depth supervision while ViT-Up learns only from still images.</p>
         <div class="stats" aria-label="Results on other backbones">
-          <div class="stat"><div class="value">70.79<span class="delta">+3.47</span></div><div class="what">Linear probing</div><div class="ctx">Cityscapes mIoU · DINOv3-B</div></div>
-          <div class="stat"><div class="value">58.80<span class="delta">+8.79</span></div><div class="what">Semantic correspondence</div><div class="ctx">SPair-71k PCK@0.10 · DINOv3-B</div></div>
-          <div class="stat"><div class="value">67.42<span class="delta">+2.12</span></div><div class="what">Linear probing</div><div class="ctx">Cityscapes mIoU · DINOv2-S</div></div>
-          <div class="stat"><div class="value">76.0<span class="delta">+2.1</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · DINOv2-S</div></div>
+          <div class="stat"><div class="value">66.42<span class="delta">+3.08</span></div><div class="what">Linear probing</div><div class="ctx">Cityscapes mIoU · DINOv3-S+</div></div>
+          <div class="stat"><div class="value">56.39<span class="delta">+5.12</span></div><div class="what">Semantic correspondence</div><div class="ctx">SPair-71k PCK@0.10 · DINOv3-S+</div></div>
+          <div class="stat"><div class="value">73.1<span class="delta">+5.7</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · DINOv3-S+</div></div>
+          <div class="stat"><div class="value">76.0<span class="delta">+2.1</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · DINOv2-S · vs. LILA</div></div>
         </div>
         <p class="stats-note">Gains over the strongest baseline on each backbone.</p>
       </div>
