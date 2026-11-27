@@ -406,10 +406,11 @@
       border-bottom: 1px solid var(--line);
     }
     thead tr:first-child th { color: var(--ink); font-size: 13px; }
-    thead th.method { text-align: left; vertical-align: bottom; }
+    thead th.method { text-align: left; vertical-align: bottom; position: sticky; left: 0; z-index: 3; background: var(--surface); }
     tbody td { border-bottom: 1px solid #f0f1f3; }
     tbody tr:last-child td { border-bottom: 0; }
-    td.method { font-weight: 550; position: sticky; left: 0; background: var(--surface); }
+    td.method { font-weight: 550; position: sticky; left: 0; z-index: 2; background: var(--surface); }
+    th.method, td.method { box-shadow: inset -1px 0 0 var(--line); }
     tr.ours td { background: #faf9ff; }
     tr.ours td.method { color: var(--accent); }
     tr.ours.main td { background: var(--tint); }
@@ -481,6 +482,7 @@
       .person { grid-template-columns: 1fr; gap: 14px; padding: 20px; }
       .person img { width: 88px; height: 88px; border-radius: 14px; }
       .btn { height: 40px; padding: 0 14px; }
+      th.method, td.method { white-space: normal; min-width: 118px; max-width: 132px; }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
