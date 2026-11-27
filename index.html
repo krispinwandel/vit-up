@@ -596,7 +596,7 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
           <div class="frame pad"><img src="assets/architecture.jpg" alt="ViT-Up architecture diagram" loading="lazy"></div>
           <figcaption>(A) Stage 1 training: a frozen teacher supervises the decoded features at multiple scales. (B) Query embedding. (C) ViT-Up block. (D) FeatX block.</figcaption>
         </figure>
-        <h3 class="stages-title">Training stages</h3>
+        <h3 class="stages-title">Two-stage training</h3>
         <div class="stages">
           <div class="stage"><span class="tag">Stage 1</span><h4>Multi-scale feature supervision</h4><p>Distills features from a frozen teacher at multiple resolutions, with LoRA adapting the backbone.</p></div>
           <div class="stage"><span class="tag">Stage 2</span><h4>Offset-guided refinement</h4><p>Self-distillation from the frozen Stage 1 model with learned query offsets, for increased sharpness and detail.</p></div>
