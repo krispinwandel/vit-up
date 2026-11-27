@@ -302,14 +302,13 @@
     .f { color: #7dd3fc; }
     .c { color: #6b7385; font-style: italic; }
 
-    .stats-title { margin: clamp(48px, 7vw, 80px) 0 16px; }
     .stats {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
+      margin-top: clamp(48px, 7vw, 80px);
     }
-    .stats-note { margin: 12px 0 0; font-size: 13px; color: var(--faint); }
-    .stats-lead { margin: 0 0 22px; max-width: 860px; font-size: 17px; color: #2b303a; }
+    .stats-caption { margin: 14px 0 0; max-width: 860px; font-size: 14px; color: var(--muted); }
     .stat {
       position: relative;
       padding: 22px 22px 20px;
@@ -329,6 +328,7 @@
     .stat .delta { margin-left: 8px; font-size: 15px; font-weight: 650; color: var(--up); letter-spacing: 0; }
     .stat .what { margin-top: 12px; font-size: 14px; font-weight: 650; }
     .stat .ctx { margin-top: 2px; font-size: 13px; color: var(--faint); }
+    .nw { white-space: nowrap; }
 
     /* figures */
     figure { margin: 0; }
@@ -575,15 +575,13 @@ dense = model.<span class="f">dense</span>(output_size=<span class="n">896</span
           </div>
         </div>
 
-        <h3 class="stats-title">Result highlights</h3>
-        <p class="stats-lead">On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k, and +5.7 J&amp;F in video object segmentation on DAVIS-2017. With DINOv3-B, the first two gains grow to +3.47 mIoU and +8.79 PCK@0.10. In video object segmentation on DINOv2-S, ViT-Up even outperforms LILA by +2.1 J&amp;F, although LILA trains on videos with optical-flow and depth supervision while ViT-Up learns only from still images.</p>
         <div class="stats" aria-label="Results on other backbones">
-          <div class="stat"><div class="value">66.42<span class="delta">+3.08</span></div><div class="what">Linear probing</div><div class="ctx">Cityscapes mIoU · DINOv3-S+</div></div>
-          <div class="stat"><div class="value">56.39<span class="delta">+5.12</span></div><div class="what">Semantic correspondence</div><div class="ctx">SPair-71k PCK@0.10 · DINOv3-S+</div></div>
-          <div class="stat"><div class="value">73.1<span class="delta">+5.7</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · DINOv3-S+</div></div>
-          <div class="stat"><div class="value">76.0<span class="delta">+2.1</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · DINOv2-S · vs. LILA</div></div>
+          <div class="stat"><div class="value">66.42<span class="delta">+3.08</span></div><div class="what">Linear probing</div><div class="ctx">Cityscapes mIoU · <span class="nw">DINOv3-S+</span></div></div>
+          <div class="stat"><div class="value">56.39<span class="delta">+5.12</span></div><div class="what">Semantic correspondence</div><div class="ctx">SPair-71k PCK@0.10 · <span class="nw">DINOv3-S+</span></div></div>
+          <div class="stat"><div class="value">73.1<span class="delta">+5.7</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · <span class="nw">DINOv3-S+</span></div></div>
+          <div class="stat"><div class="value">76.0<span class="delta">+2.1</span></div><div class="what">Video object segmentation</div><div class="ctx">DAVIS-2017 k-NN J&amp;F · <span class="nw">DINOv2-S</span> · <span class="nw">vs. LILA</span></div></div>
         </div>
-        <p class="stats-note">Gains over the strongest baseline on each backbone.</p>
+        <p class="stats-caption">On DINOv3-S+, ViT-Up improves over the strongest baselines by +3.08 mIoU in linear probing on Cityscapes, +5.12 PCK@0.10 in semantic correspondence on SPair-71k, and +5.7 J&amp;F in video object segmentation on DAVIS-2017. With DINOv3-B, the first two gains grow to +3.47 mIoU and +8.79 PCK@0.10. In video object segmentation on DINOv2-S, ViT-Up even outperforms LILA by +2.1 J&amp;F, although LILA trains on videos with optical-flow and depth supervision while ViT-Up learns only from still images.</p>
       </div>
     </section>
 
