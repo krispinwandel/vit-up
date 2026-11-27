@@ -134,11 +134,20 @@
     }
     .hero h1 {
       margin: 0;
+      padding-bottom: 0.06em;
       font-size: clamp(64px, 12vw, 148px);
       line-height: 0.92;
       letter-spacing: -0.045em;
       font-weight: 800;
+      background: linear-gradient(100deg, #ffffff 0%, #c7d2fe 20%, #a5b4fc 36%, #f0abfc 54%, #fda4af 72%, #fde68a 88%, #ffffff 100%);
+      background-size: 180% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 6px 28px rgba(5, 6, 10, 0.45));
+      animation: sheen 9s ease-in-out infinite alternate;
     }
+    @keyframes sheen { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
     .hero .tagline {
       margin: 18px 0 0;
       max-width: 760px;
@@ -486,6 +495,7 @@
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .scroll-cue::after { animation: none; }
+      .hero h1 { animation: none; background-position: 60% 50%; }
     }
   </style>
 </head>
