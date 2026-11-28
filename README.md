@@ -12,9 +12,9 @@
 [![Colab](https://img.shields.io/badge/Colab-Open%20Notebook-f9ab00?style=flat-square&logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/krispinwandel/vit-up/blob/main/inference_example_colab.ipynb)
 [![Forum](https://img.shields.io/badge/Discuna-Forum-6e56cf?style=flat-square)](https://app.discuna.com/invite/krispinwandel)
 
-<img src="assets/readme/vit_up_video.webp" alt="Dense ViT-Up features on video, visualized with PCA" width="720">
+<img src="assets/readme/vit_up_video.webp" alt="RGB input, DINOv3-S+ backbone features and dense ViT-Up features on video, shown with PCA" width="720">
 
-<sub>Dense ViT-Up features (<code>dinov3_splus_g28_56</code>) computed frame by frame and projected to RGB with PCA.</sub>
+<sub>RGB input → DINOv3-S+ backbone features → dense ViT-Up features (<code>dinov3_splus_g28_56</code>), shown with PCA.</sub>
 
 </div>
 
